@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+
+# ASP.NET Core
+.env
+
+# Docker
+docker-compose.override.yml
+
+# Visual Studio
+.vs/
+*.vscode/
