@@ -13,6 +13,7 @@ using LeveLEO.Features.Promotions.Models.Coupons;
 using LeveLEO.Features.Shipping.Models;
 using LeveLEO.Features.ShoppingCarts.Models;
 using LeveLEO.Features.UserProductRelations.Models;
+using LeveLEO.Infrastructure.Common;
 using LeveLEO.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +71,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        #region Global Query Filters
 
         // -------------------------
         // Identity / Users
@@ -512,6 +515,56 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         builder.Entity<Product>()
             .HasIndex(p => p.BrandId);
+
+        #endregion Global Query Filters
+
+        // ───────────────────────────────────────────────────────────────
+        // КОНФІГУРАЦІЯ OWNED TYPES у Promotion: ProductLevelCondition та CartLevelCondition
+        // ───────────────────────────────────────────────────────────────
+
+        // ProductLevelCondition
+        builder.Entity<Promotion>()
+            .OwnsOne(p => p.ProductConditions, plc =>
+            {
+                plc.Property(c => c.ProductIds)
+                   .HasConversion(
+                       v => v.HasValue ? JsonSerializer.Serialize(v.Value, JsonSerializerOptions.Default) : null,
+                       v => v == null ? new Optional<List<Guid>>() : new Optional<List<Guid>>(JsonSerializer.Deserialize<List<Guid>>(v)!)
+                   )
+                   .HasColumnType("jsonb");
+
+                plc.Property(c => c.CategoryIds)
+                   .HasConversion(
+                       v => v.HasValue ? JsonSerializer.Serialize(v.Value, JsonSerializerOptions.Default) : null,
+                       v => v == null ? new Optional<List<Guid>>() : new Optional<List<Guid>>(JsonSerializer.Deserialize<List<Guid>>(v)!)
+                   )
+                   .HasColumnType("jsonb");
+            });
+
+        // CartLevelCondition
+        builder.Entity<Promotion>()
+            .OwnsOne(p => p.CartConditions, clc =>
+            {
+                clc.Property(c => c.MinTotalAmount)
+                   .HasColumnType("numeric(18,2)");
+
+                clc.Property(c => c.MinQuantity)
+                   .HasColumnType("integer");
+
+                clc.Property(c => c.ProductIds)
+                   .HasConversion(
+                       v => v.HasValue ? JsonSerializer.Serialize(v.Value, JsonSerializerOptions.Default) : null,
+                       v => v == null ? new Optional<List<Guid>>() : new Optional<List<Guid>>(JsonSerializer.Deserialize<List<Guid>>(v)!)
+                   )
+                   .HasColumnType("jsonb");
+
+                clc.Property(c => c.CategoryIds)
+                   .HasConversion(
+                       v => v.HasValue ? JsonSerializer.Serialize(v.Value, JsonSerializerOptions.Default) : null,
+                       v => v == null ? new Optional<List<Guid>>() : new Optional<List<Guid>>(JsonSerializer.Deserialize<List<Guid>>(v)!)
+                   )
+                   .HasColumnType("jsonb");
+            });
     }
 
     public override int SaveChanges()

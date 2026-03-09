@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 
 namespace LeveLEO.Features.Payments.Services;
 
-public class PaymentService(AppDbContext db, ILiqPayService liqPayService, IOrderService orderService) : IPaymentService
+public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPaymentService
 {
     public async Task<CreatePaymentResultDto> CreatePaymentAsync(
     Order order,
@@ -99,7 +99,6 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService, IOrde
         };
 
         await db.SaveChangesAsync();
-        await orderService.NotifyPaymentUpdated(payment.Id);
     }
 
     public LiqPayStatusResponseDto VerifyCallback(string data, string signature)

@@ -1,4 +1,8 @@
-﻿namespace LeveLEO.Features.Inventory.Services;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace LeveLEO.Features.Inventory.Services;
 
 public interface IInventoryService
 {
@@ -11,4 +15,7 @@ public interface IInventoryService
     Task<int> GetAvailableQuantityAsync(Guid productId);
 
     Task ConfirmReservationAsync(Guid productId, Guid orderId);
+
+    // Реализация по умолчанию, чтобы не требовать добавления абстрактного метода у всех реализаций.
+    Task<Dictionary<Guid, int>> GetAvailableQuantitiesAsync(IEnumerable<Guid> productIds);
 }

@@ -36,7 +36,7 @@ public class OrderService(
         var order = await db.Orders
             .Include(o => o.OrderItems)
             .Include(o => o.Address)
-            .Include(o => o.Payment) // підтягуємо Payment
+            .Include(o => o.Payment)
             .Include(o => o.Delivery)
             .FirstOrDefaultAsync(o => o.Id == orderId)
             ?? throw new ApiException(
@@ -44,8 +44,15 @@ public class OrderService(
                 $"Order with Id '{orderId}' not found.",
                 404
             );
+
+        // Оновлюємо статус платежу, якщо потрібно
+        await RefreshPaymentStatusIfNeededAsync(order);
+
+        // Якщо платіж є — підтягуємо свіжі дані (опціонально, якщо потрібно)
         if (order.PaymentId != null)
+        {
             _ = await paymentService.GetPaymentByIdAsync((Guid)order.PaymentId);
+        }
 
         return await MapToDetailDtoAsync(order);
     }
@@ -64,8 +71,13 @@ public class OrderService(
                 404
             );
 
+        // Оновлюємо статус платежу, якщо потрібно
+        await RefreshPaymentStatusIfNeededAsync(order);
+
         if (order.PaymentId != null)
+        {
             _ = await paymentService.GetPaymentByIdAsync((Guid)order.PaymentId);
+        }
 
         return await MapToDetailDtoAsync(order);
     }
@@ -73,7 +85,7 @@ public class OrderService(
     public async Task<List<OrderListItemDto>> GetByUserIdAsync(string userId, DateTimeOffset? startDate, DateTimeOffset? endDate)
     {
         var query = db.Orders
-        .Where(o => o.UserId == userId && o.Status != OrderStatus.PaymentFailed);
+            .Where(o => o.UserId == userId && o.Status != OrderStatus.PaymentFailed);
 
         if (startDate.HasValue)
             query = query.Where(o => o.CreatedAt >= startDate.Value);
@@ -83,18 +95,24 @@ public class OrderService(
 
         var orders = await query
             .OrderByDescending(o => o.CreatedAt)
-            .Select(o => new OrderListItemDto
-            {
-                Id = o.Id,
-                Number = o.Number,
-                CreatedAt = o.CreatedAt,
-                Status = o.Status,
-                TotalPayable = o.TotalPayable,
-                AddressSummary = $"{o.Address.CityName}, {o.Address.Street} {o.Address.House}"
-            })
-            .ToListAsync();
+            .ToListAsync(); // спочатку завантажуємо повні об’єкти
 
-        return orders;
+        // Оновлюємо статус платежів для всіх знайдених замовлень
+        foreach (var order in orders)
+        {
+            await RefreshPaymentStatusIfNeededAsync(order);
+        }
+
+        // Тепер мапимо в DTO після можливого оновлення
+        return [.. orders.Select(o => new OrderListItemDto
+        {
+            Id = o.Id,
+            Number = o.Number,
+            CreatedAt = o.CreatedAt,
+            Status = o.Status,
+            TotalPayable = o.TotalPayable,
+            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}"
+        })];
     }
 
     public async Task<OrderDetailDto> UpdateAsync(Guid orderId, OrderUpdateDto orderUpdate)
@@ -469,6 +487,31 @@ public class OrderService(
         {
             // TODO: Додати логування
             Console.WriteLine($"Error checking expired payment {paymentId}: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshPaymentStatusIfNeededAsync(Order order)
+    {
+        if (!order.PaymentId.HasValue || order.Payment?.Status != PaymentStatus.Pending)
+        {
+            return; // нічого не треба оновлювати
+        }
+
+        var freshPayment = await paymentService.GetPaymentByIdAsync(order.PaymentId.Value);
+        if (freshPayment == null || freshPayment.Status == PaymentStatus.Pending)
+        {
+            return; // статус не змінився або платіж не знайдено
+        }
+
+        // Оновлюємо статус платежу в базі
+        order.Payment.Status = freshPayment.Status;
+        await db.SaveChangesAsync();
+
+        // Якщо платіж успішний і замовлення ще в Pending — переводимо в Processing
+        if (freshPayment.Status == PaymentStatus.Success && order.Status == OrderStatus.Pending)
+        {
+            order.Status = OrderStatus.Processing;
+            await db.SaveChangesAsync();
         }
     }
 }

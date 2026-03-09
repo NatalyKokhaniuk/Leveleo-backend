@@ -95,4 +95,20 @@ public class InventoryService(AppDbContext db) : IInventoryService
 
         await db.SaveChangesAsync();
     }
+
+    public async Task<Dictionary<Guid, int>> GetAvailableQuantitiesAsync(IEnumerable<Guid> productIds)
+    {
+        var result = new Dictionary<Guid, int>();
+        if (productIds == null)
+            return result;
+
+        foreach (var productId in productIds)
+        {
+            // Используем существующий метод для каждого продукта.
+            var qty = await GetAvailableQuantityAsync(productId).ConfigureAwait(false);
+            result[productId] = qty;
+        }
+
+        return result;
+    }
 }

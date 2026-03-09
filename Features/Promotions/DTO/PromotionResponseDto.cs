@@ -1,4 +1,5 @@
 ﻿using LeveLEO.Features.Promotions.Models;
+using System.Text.Json.Serialization;
 
 namespace LeveLEO.Features.Promotions.DTO;
 

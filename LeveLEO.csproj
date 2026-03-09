@@ -35,10 +35,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Shipping\Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EditorConfigFiles Remove="C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\.editorconfig" />
   </ItemGroup>
 

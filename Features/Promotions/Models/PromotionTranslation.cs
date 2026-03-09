@@ -1,5 +1,6 @@
 ﻿using LeveLEO.Infrastructure.Translation.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace LeveLEO.Features.Promotions.Models;
 
@@ -19,5 +20,6 @@ public class PromotionTranslation : ITranslation
 
     public string? Description { get; set; }
 
+    //[JsonIgnore]
     public Promotion Promotion { get; set; } = null!;
 }

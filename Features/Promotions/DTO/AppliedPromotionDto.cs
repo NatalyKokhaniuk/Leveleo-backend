@@ -22,5 +22,5 @@ public class AppliedPromotionDto
 
     public bool IsPersonal { get; set; } = false;
     public string? CouponCode { get; set; }
-    public ICollection<PromotionTranslation> Translations { get; set; } = [];
+    public ICollection<PromotionTranslationDto> Translations { get; set; } = [];
 }

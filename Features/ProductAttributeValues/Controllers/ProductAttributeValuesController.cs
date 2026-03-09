@@ -7,7 +7,6 @@ namespace LeveLEO.Features.ProductAttributeValues.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Moderator")]
 public class ProductAttributeValuesController(IProductAttributeValueService service) : ControllerBase
 {
     #region ATTRIBUTE VALUES
@@ -21,6 +20,7 @@ public class ProductAttributeValuesController(IProductAttributeValueService serv
         => Ok(await service.GetByIdAsync(id));
 
     [HttpPost("product/{productId:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeValueResponseDto>> Create(Guid productId, CreateProductAttributeValueDto dto)
     {
         var created = await service.CreateAsync(productId, dto);
@@ -28,10 +28,12 @@ public class ProductAttributeValuesController(IProductAttributeValueService serv
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeValueResponseDto>> Update(Guid id, UpdateProductAttributeValueDto dto)
         => Ok(await service.UpdateAsync(id, dto));
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await service.DeleteAsync(id);
@@ -43,18 +45,21 @@ public class ProductAttributeValuesController(IProductAttributeValueService serv
     #region TRANSLATIONS
 
     [HttpPost("{valueId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeValueTranslationResponseDto>> AddTranslation(
         Guid valueId,
         CreateProductAttributeValueTranslationDto dto)
         => Ok(await service.AddTranslationAsync(valueId, dto));
 
     [HttpPut("{valueId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeValueTranslationResponseDto>> UpdateTranslation(
         Guid valueId,
         CreateProductAttributeValueTranslationDto dto)
         => Ok(await service.UpdateTranslationAsync(valueId, dto));
 
     [HttpDelete("{valueId:guid}/translations/{languageCode}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteTranslation(
         Guid valueId,
         string languageCode)

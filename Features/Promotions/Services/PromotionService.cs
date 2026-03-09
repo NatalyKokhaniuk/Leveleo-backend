@@ -411,7 +411,13 @@ public class PromotionService(AppDbContext db) : IPromotionService
                 IsCoupon = applied.IsCoupon,
                 IsPersonal = applied.IsPersonal,
                 CouponCode = applied.CouponCode,
-                Translations = applied.Translations,
+                Translations = [.. applied.Translations
+                    .Select(t => new PromotionTranslationDto
+                    {
+                        LanguageCode = t.LanguageCode,
+                        Name = t.Name,
+                        Description = t.Description
+                    })],
             };
 
             // Визначаємо результат купона

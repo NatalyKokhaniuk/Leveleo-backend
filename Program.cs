@@ -11,6 +11,7 @@ using LeveLEO.Features.Payments.Services;
 using LeveLEO.Features.ProductAttributes.Services;
 using LeveLEO.Features.Products.Services;
 using LeveLEO.Features.Promotions.Services;
+using LeveLEO.Features.Shipping.Services;
 using LeveLEO.Features.ShoppingCarts.Services;
 using LeveLEO.Features.UserProductRelations.Services;
 using LeveLEO.Features.Users.Services;
@@ -93,6 +94,8 @@ builder.Services.AddScoped<ICouponAssignmentService, CouponAssignmentService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
 builder.Services.AddScoped<IUserProductRelationService, UserProductRelationService>();
+builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 
 // Infrastructure services
 builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
@@ -146,15 +149,17 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer(new BearerSecuritySchemeTransformer());
+    options.AddOperationTransformer((operation, context, cancellationToken) =>
+    {
+        Console.WriteLine($"Processing endpoint: {context.Description.ActionDescriptor.DisplayName}");
+        return Task.CompletedTask;
+    });
 });
 
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
-//if (app.Environment.IsDevelopment())
-//{
-// await DatabaseSeeder.SeedAsync(app);
-//}
+//await DatabaseSeeder.SeedAsync(app);
 app.UseMiddleware<GlobalExceptionHandler>();
 
 if (!app.Environment.IsDevelopment())
@@ -185,6 +190,24 @@ if (app.Environment.IsDevelopment())
 
     app.MapOpenApi();
 }
+//app.MapScalarApiReference(options =>
+//{
+//    options.Title = "LeveLEO API Документація";
+//    options.WithTheme(ScalarTheme.Kepler);
+//    //    options.Servers = new List<ScalarServer>
+//    //{
+//    //    new ScalarServer("http://localhost:5158", "Локальний сервер")
+//    //};
+
+//    options.AddHttpAuthentication("Bearer", scheme =>
+//    {
+//    });
+
+//    options.AddPreferredSecuritySchemes("Bearer");
+//});
+//var transformer = new BearerSecuritySchemeTransformer();
+
+//app.MapOpenApi();
 
 app.MapControllers();
 

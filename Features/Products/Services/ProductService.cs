@@ -237,10 +237,13 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
             {
                 Product = p,
                 AverageRating = p.OrderItems
-                    .Where(oi => oi.Review != null && oi.Review.IsApproved)
-                    .Select(oi => (decimal?)oi.Review!.Rating)
-                    .DefaultIfEmpty(0)
-                    .Average() ?? 0m,
+    .Where(oi => oi.Review != null && oi.Review.IsApproved)
+    .Any()
+    ? p.OrderItems
+        .Where(oi => oi.Review != null && oi.Review.IsApproved)
+        .Average(oi => (decimal)oi.Review!.Rating)
+    : 0m,
+
                 TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
                 RatingCount = p.OrderItems
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
@@ -292,10 +295,13 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
             {
                 Product = p,
                 AverageRating = p.OrderItems
-                    .Where(oi => oi.Review != null && oi.Review.IsApproved)
-                    .Select(oi => (decimal?)oi.Review!.Rating)
-                    .DefaultIfEmpty(0)
-                    .Average() ?? 0m,
+    .Where(oi => oi.Review != null && oi.Review.IsApproved)
+    .Any()
+    ? p.OrderItems
+        .Where(oi => oi.Review != null && oi.Review.IsApproved)
+        .Average(oi => (decimal)oi.Review!.Rating)
+    : 0m,
+
                 TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
                 RatingCount = p.OrderItems
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
@@ -328,10 +334,13 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
             .Select(p => new ProductAggregates
             {
                 AverageRating = p.OrderItems
-                    .Where(oi => oi.Review != null && oi.Review.IsApproved)
-                    .Select(oi => (decimal?)oi.Review!.Rating)
-                    .DefaultIfEmpty(0)
-                    .Average() ?? 0m,
+    .Where(oi => oi.Review != null && oi.Review.IsApproved)
+    .Any()
+    ? p.OrderItems
+        .Where(oi => oi.Review != null && oi.Review.IsApproved)
+        .Average(oi => (decimal)oi.Review!.Rating)
+    : 0m,
+
                 TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
                 RatingCount = p.OrderItems
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
@@ -372,9 +381,9 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 IsCoupon = promotion.IsCoupon,
                 IsPersonal = promotion.IsPersonal,
                 CouponCode = promotion.CouponCode,
-                Translations = [.. promotion.Translations.Select(t => new PromotionTranslation
+                Translations = [.. promotion.Translations
+                .Select(t => new PromotionTranslationDto
                 {
-                    Id = t.Id,
                     LanguageCode = t.LanguageCode,
                     Name = t.Name,
                     Description = t.Description
@@ -412,10 +421,13 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
             {
                 p.Id,
                 AverageRating = p.OrderItems
-                    .Where(oi => oi.Review != null && oi.Review.IsApproved)
-                    .Select(oi => (decimal?)oi.Review!.Rating)
-                    .DefaultIfEmpty(0)
-                    .Average() ?? 0m,
+    .Where(oi => oi.Review != null && oi.Review.IsApproved)
+    .Any()
+    ? p.OrderItems
+        .Where(oi => oi.Review != null && oi.Review.IsApproved)
+        .Average(oi => (decimal)oi.Review!.Rating)
+    : 0m,
+
                 TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
                 RatingCount = p.OrderItems // 👈 ДОДАНО
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
@@ -428,11 +440,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
         var promotionsDict = await _promotionService.GetBestProductPromotionsAsync(productList);
 
         // 3️⃣ Доступна кількість для всіх продуктів (batch)
-        var availabilityDict = new Dictionary<Guid, int>();
-        foreach (var productId in productIds)
-        {
-            availabilityDict[productId] = await _inventoryService.GetAvailableQuantityAsync(productId);
-        }
+        var availabilityDict = await _inventoryService.GetAvailableQuantitiesAsync(productIds);
 
         // 4️⃣ Map
         var result = new List<ProductResponseDto>();
@@ -465,13 +473,13 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                     IsCoupon = promotion.IsCoupon,
                     IsPersonal = promotion.IsPersonal,
                     CouponCode = promotion.CouponCode,
-                    Translations = [.. promotion.Translations.Select(t => new PromotionTranslation
-                {
-                    Id = t.Id,
-                    LanguageCode = t.LanguageCode,
-                    Name = t.Name,
-                    Description = t.Description
-                })]
+                    Translations = [.. promotion.Translations
+                    .Select(t => new PromotionTranslationDto
+                    {
+                        LanguageCode = t.LanguageCode,
+                        Name = t.Name,
+                        Description = t.Description
+                    })]
                 },
                 MainImageKey = product.MainImageKey,
                 StockQuantity = product.StockQuantity,
@@ -552,12 +560,17 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 {
                     var catIds = promotion.ProductConditions.CategoryIds.Value;
 
-                    var descendantIds = await _db.CategoryClosures
+                    var descendantCategoryIds = await _db.CategoryClosures
                         .Where(c => catIds.Contains(c.AncestorId))
                         .Select(c => c.DescendantId)
                         .ToListAsync();
 
-                    productIds.AddRange(descendantIds);
+                    var categoryProductIds = await _db.Products
+                        .Where(p => descendantCategoryIds.Contains(p.CategoryId))
+                        .Select(p => p.Id)
+                        .ToListAsync();
+
+                    productIds.AddRange(categoryProductIds);
                 }
 
                 // Виключаємо дублі

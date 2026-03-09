@@ -7,20 +7,22 @@ namespace LeveLEO.Features.Categories.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Moderator")]
 public class CategoriesController(ICategoryService service) : ControllerBase
 {
     private readonly ICategoryService _service = service;
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<CategoryResponseDto>> Create([FromBody] CreateCategoryDto dto)
         => Ok(await _service.CreateAsync(dto));
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<CategoryResponseDto>> Update(Guid id, [FromBody] UpdateCategoryDto dto)
         => Ok(await _service.UpdateAsync(id, dto));
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await _service.DeleteAsync(id);
@@ -50,6 +52,7 @@ public class CategoriesController(ICategoryService service) : ControllerBase
     // -------------------- TRANSLATIONS --------------------
 
     [HttpPost("{categoryId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> AddTranslation(Guid categoryId, [FromBody] CreateCategoryTranslationDto dto)
     {
         await _service.AddTranslationAsync(categoryId, dto);
@@ -57,6 +60,7 @@ public class CategoriesController(ICategoryService service) : ControllerBase
     }
 
     [HttpPut("{categoryId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> UpdateTranslation(Guid categoryId, [FromBody] CreateCategoryTranslationDto dto)
     {
         await _service.UpdateTranslationAsync(categoryId, dto);
@@ -64,6 +68,7 @@ public class CategoriesController(ICategoryService service) : ControllerBase
     }
 
     [HttpDelete("{categoryId:guid}/translations/{languageCode}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteTranslation(Guid categoryId, string languageCode)
     {
         await _service.DeleteTranslationAsync(categoryId, languageCode);

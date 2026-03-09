@@ -5,8 +5,12 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+
 public class MediaService : IMediaService
 {
     private readonly IAmazonS3 _s3;
@@ -52,7 +56,7 @@ public class MediaService : IMediaService
     // === Pre-signed URL метод ===
     public Task<string> GetFileUrlAsync(string key, TimeSpan? expiresIn = null)
     {
-        var expiry = expiresIn ?? TimeSpan.FromDays(365); // дефолт 15 хв
+        var expiry = expiresIn ?? TimeSpan.FromDays(365); // дефолт 365 дней
 
         var request = new GetPreSignedUrlRequest
         {
@@ -66,5 +70,53 @@ public class MediaService : IMediaService
 
         //return Task.FromResult(GetPermanentUrl(key));
     }
+
     public string GetPermanentUrl(string key) => $"{_baseUrl}/{key}";
+
+    public async Task ClearBucketAsync()
+    {
+        try
+        {
+            var listRequest = new ListObjectsV2Request
+            {
+                BucketName = _bucket
+            };
+
+            ListObjectsV2Response listResponse;
+            do
+            {
+                listResponse = await _s3.ListObjectsV2Async(listRequest);
+
+                // Защита от возможного null у S3Objects
+                if (listResponse.S3Objects != null && listResponse.S3Objects.Count != 0)
+                {
+                    var deleteObjects = listResponse.S3Objects.Select(obj => new KeyVersion { Key = obj.Key }).ToList();
+
+                    var deleteRequest = new DeleteObjectsRequest
+                    {
+                        BucketName = _bucket,
+                        Objects = deleteObjects
+                    };
+
+                    await _s3.DeleteObjectsAsync(deleteRequest);
+                    Console.WriteLine($"Видалено {deleteObjects.Count} об'єктів.");
+                }
+
+                listRequest.ContinuationToken = listResponse.NextContinuationToken;
+                // Безопасная проверка nullable булевого значения
+            } while (listResponse.IsTruncated == true);
+
+            Console.WriteLine("Бакет очищено повністю.");
+        }
+        catch (AmazonS3Exception ex)
+        {
+            Console.WriteLine($"S3 помилка при очищенні: {ex.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Загальна помилка при очищенні бакету: {ex.Message}");
+            throw;
+        }
+    }
 }

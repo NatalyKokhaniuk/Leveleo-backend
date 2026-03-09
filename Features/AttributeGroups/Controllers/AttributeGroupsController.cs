@@ -7,7 +7,6 @@ namespace LeveLEO.Features.AttributeGroups.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Moderator")]
 public class AttributeGroupsController(IAttributeGroupService service) : ControllerBase
 {
     #region CRUD
@@ -46,6 +45,7 @@ public class AttributeGroupsController(IAttributeGroupService service) : Control
 
     // POST api/attributegroups
     [HttpPost]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<AttributeGroupResponseDto>> Create(
         [FromBody] CreateAttributeGroupDto dto)
     {
@@ -55,6 +55,7 @@ public class AttributeGroupsController(IAttributeGroupService service) : Control
 
     // PUT api/attributegroups/{id}
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<AttributeGroupResponseDto>> Update(
         Guid id,
         [FromBody] UpdateAttributeGroupDto dto)
@@ -65,6 +66,7 @@ public class AttributeGroupsController(IAttributeGroupService service) : Control
 
     // DELETE api/attributegroups/{id}
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await service.DeleteAsync(id);
@@ -77,6 +79,7 @@ public class AttributeGroupsController(IAttributeGroupService service) : Control
 
     // POST api/attributegroups/{groupId}/translations
     [HttpPost("{groupId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<AttributeGroupTranslationResponseDto>> AddTranslation(
         Guid groupId,
         [FromBody] CreateAttributeGroupTranslationDto dto)
@@ -87,6 +90,7 @@ public class AttributeGroupsController(IAttributeGroupService service) : Control
 
     // PUT api/attributegroups/{groupId}/translations
     [HttpPut("{groupId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<AttributeGroupTranslationResponseDto>> UpdateTranslation(
         Guid groupId,
         [FromBody] CreateAttributeGroupTranslationDto dto)
@@ -97,6 +101,7 @@ public class AttributeGroupsController(IAttributeGroupService service) : Control
 
     // DELETE api/attributegroups/{groupId}/translations/{languageCode}
     [HttpDelete("{groupId:guid}/translations/{languageCode}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteTranslation(
         Guid groupId,
         string languageCode)

@@ -7,7 +7,6 @@ namespace LeveLEO.Features.Brands.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Moderator")]
 public class BrandsController(IBrandService service) : ControllerBase
 {
     private readonly IBrandService _service = service;
@@ -15,6 +14,7 @@ public class BrandsController(IBrandService service) : ControllerBase
     // -------------------- BRANDS --------------------
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<BrandResponseDto>> Create([FromBody] CreateBrandDto dto)
     {
         var result = await _service.CreateAsync(dto);
@@ -50,6 +50,7 @@ public class BrandsController(IBrandService service) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<BrandResponseDto>> Update(Guid id, [FromBody] UpdateBrandDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
@@ -57,6 +58,7 @@ public class BrandsController(IBrandService service) : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await _service.DeleteAsync(id);
@@ -66,6 +68,7 @@ public class BrandsController(IBrandService service) : ControllerBase
     // -------------------- TRANSLATIONS --------------------
 
     [HttpPost("{brandId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> AddTranslation(Guid brandId, [FromBody] CreateBrandTranslationDto dto)
     {
         await _service.AddTranslationAsync(brandId, dto);
@@ -73,6 +76,7 @@ public class BrandsController(IBrandService service) : ControllerBase
     }
 
     [HttpPut("{brandId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> UpdateTranslation(Guid brandId, [FromBody] CreateBrandTranslationDto dto)
     {
         await _service.UpdateTranslationAsync(brandId, dto);
@@ -80,6 +84,7 @@ public class BrandsController(IBrandService service) : ControllerBase
     }
 
     [HttpDelete("{brandId:guid}/translations/{languageCode}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteTranslation(Guid brandId, string languageCode)
     {
         await _service.DeleteTranslationAsync(brandId, languageCode);

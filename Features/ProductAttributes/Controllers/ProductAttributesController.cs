@@ -7,7 +7,6 @@ namespace LeveLEO.Features.ProductAttributes.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Moderator")]
 public class ProductAttributesController(IProductAttributeService service) : ControllerBase
 {
     #region ATTRIBUTES
@@ -37,6 +36,7 @@ public class ProductAttributesController(IProductAttributeService service) : Con
         => Ok(await service.GetByGroupSlugAsync(groupSlug));
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeResponseDto>> Create(CreateProductAttributeDto dto)
     {
         var created = await service.CreateAsync(dto);
@@ -44,10 +44,12 @@ public class ProductAttributesController(IProductAttributeService service) : Con
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeResponseDto>> Update(Guid id, UpdateProductAttributeDto dto)
         => Ok(await service.UpdateAsync(id, dto));
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await service.DeleteAsync(id);
@@ -60,6 +62,7 @@ public class ProductAttributesController(IProductAttributeService service) : Con
 
     // POST api/productattributes/{attributeId}/translations
     [HttpPost("{attributeId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeTranslationResponseDto>> AddTranslation(
         Guid attributeId,
         CreateProductAttributeTranslationDto dto)
@@ -67,6 +70,7 @@ public class ProductAttributesController(IProductAttributeService service) : Con
 
     // PUT api/productattributes/{attributeId}/translations
     [HttpPut("{attributeId:guid}/translations")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<ProductAttributeTranslationResponseDto>> UpdateTranslation(
         Guid attributeId,
         CreateProductAttributeTranslationDto dto)
@@ -74,6 +78,7 @@ public class ProductAttributesController(IProductAttributeService service) : Con
 
     // DELETE api/productattributes/{attributeId}/translations/{languageCode}
     [HttpDelete("{attributeId:guid}/translations/{languageCode}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteTranslation(
         Guid attributeId,
         string languageCode)
