@@ -22,6 +22,9 @@ public interface IOrderItemReviewService
     // Для продуктів
     Task<ProductReviewsDto> GetProductReviewsAsync(Guid productId, int page = 1, int pageSize = 10, bool approvedOnly = true);
 
+    // Для головної сторінки
+    Task<List<ReviewResponseDto>> GetFeaturedReviewsForHomepageAsync();
+
     // Адмін
     Task<ReviewResponseDto> ApproveReviewAsync(Guid reviewId);
 

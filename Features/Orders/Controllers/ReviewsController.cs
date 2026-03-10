@@ -150,6 +150,18 @@ public class ReviewsController(IOrderItemReviewService reviewService) : Controll
         return Ok(result);
     }
 
+    /// <summary>
+    /// Отримати топ-5 п'ятизіркових відгуків для товарів в наявності (для головної сторінки)
+    /// Доступно: всім
+    /// </summary>
+    [HttpGet("homepage-featured")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<ReviewResponseDto>>> GetFeaturedReviews()
+    {
+        var reviews = await reviewService.GetFeaturedReviewsForHomepageAsync();
+        return Ok(reviews);
+    }
+
     #endregion Public Access
 
     #region Admin Actions

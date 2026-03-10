@@ -13,7 +13,15 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080;
-      
+  redis:
+    image: redis:7-alpine
+    container_name: leveleo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis-data:

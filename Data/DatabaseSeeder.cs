@@ -97,7 +97,12 @@ public static class DatabaseSeeder
             new Brand { Name = "Kali Audio", Slug = "kali-audio", Description = "Affordable high-quality studio monitors", MetaTitle = "Kali Audio LP-6, IN-5 - Leveleo", MetaDescription = "Kali Audio studio monitors with delivery"},
             new Brand { Name = "Yamaha", Slug = "yamaha", Description = "Professional audio and musical instruments", MetaTitle = "Yamaha HS8 - Leveleo", MetaDescription = "Yamaha studio monitors and headphones" },
             new Brand { Name = "Behringer", Slug = "behringer", Description = "Affordable analog synths", MetaTitle = "Behringer DeepMind - Leveleo", MetaDescription = "Behringer synthesizers with delivery" },
-            new Brand { Name = "Audio-Technica", Slug = "audio-technica", Description = "Professional studio headphones", MetaTitle = "Audio-Technica ATH-M50x - Leveleo", MetaDescription = "Audio-Technica headphones"}
+            new Brand { Name = "Audio-Technica", Slug = "audio-technica", Description = "Professional studio headphones", MetaTitle = "Audio-Technica ATH-M50x - Leveleo", MetaDescription = "Audio-Technica headphones"},
+            new Brand { Name = "Fender", Slug = "fender", Description = "Legendary electric guitars and basses", MetaTitle = "Fender Stratocaster - Leveleo", MetaDescription = "Fender electric guitars with delivery"},
+            new Brand { Name = "Ibanez", Slug = "ibanez", Description = "High-performance guitars and basses", MetaTitle = "Ibanez RG - Leveleo", MetaDescription = "Ibanez guitars for rock and metal"},
+            new Brand { Name = "Yamaha Electric", Slug = "yamaha-electric", Description = "Electric violins and strings", MetaTitle = "Yamaha Silent Violin - Leveleo", MetaDescription = "Yamaha electric violins"},
+            new Brand { Name = "NS Design", Slug = "ns-design", Description = "Electric string instruments", MetaTitle = "NS Design WAV - Leveleo", MetaDescription = "NS Design electric violins"},
+            new Brand { Name = "Pioneer DJ", Slug = "pioneer-dj", Description = "Professional DJ equipment", MetaTitle = "Pioneer DDJ - Leveleo", MetaDescription = "Pioneer DJ controllers"}
             };
 
             context.Brands.AddRange(brands);
@@ -124,7 +129,10 @@ public static class DatabaseSeeder
             var headphones = new Category { Name = "Headphones", Slug = "studio-headphones", Description = "For studio and DJ", MetaTitle = "Studio Headphones", MetaDescription = "Sennheiser, Audio-Technica", IsActive = true };
             var monitors = new Category { Name = "Studio Monitors", Slug = "studio-monitors", Description = "Nearfield studio speakers", MetaTitle = "Studio Monitors", MetaDescription = "Kali Audio, Yamaha HS", IsActive = true };
             var microphones = new Category { Name = "Microphones", Slug = "microphones", Description = "For vocals and recording", MetaTitle = "Microphones", MetaDescription = "Shure SM7B, Rode NT1", IsActive = true };
-            context.Categories.AddRange(analog, digital, headphones, monitors, microphones);
+            var guitars = new Category { Name = "Electric Guitars", Slug = "electric-guitars", Description = "Electric guitars and basses", MetaTitle = "Electric Guitars", MetaDescription = "Fender, Ibanez guitars", IsActive = true };
+            var violins = new Category { Name = "Electric Violins", Slug = "electric-violins", Description = "Electric violins and string instruments", MetaTitle = "Electric Violins", MetaDescription = "Yamaha, NS Design violins", IsActive = true };
+            var djEquipment = new Category { Name = "DJ Equipment", Slug = "dj-equipment", Description = "DJ controllers and mixers", MetaTitle = "DJ Equipment", MetaDescription = "Pioneer DJ controllers", IsActive = true };
+            context.Categories.AddRange(analog, digital, headphones, monitors, microphones, guitars, violins, djEquipment);
             await context.SaveChangesAsync();
 
             var poly = new Category { Name = "Polyphonic", Slug = "polyphonic", ParentId = analog.Id, Description = "Multi-voice analog", MetaTitle = "Polyphonic Synthesizers", MetaDescription = "Korg Minilogue, Arturia", IsActive = true };
@@ -198,28 +206,39 @@ public static class DatabaseSeeder
             var products = new List<Product>
             {
                 // Поліфонічні аналогові
-                new() { Name = "Korg Minilogue XD", Slug = "korg-minilogue-xd", Description = "4-voice analog polyphonic synthesizer with multi-engine, effects, and built-in sequencer", Price = 749.00m, StockQuantity = 8, IsActive = true, BrandId = brandsDict["korg"], CategoryId = catsDict["polyphonic"] },
-                new() { Name = "Arturia PolyBrute", Slug = "arturia-polybrute", Description = "6-voice fully analog polyphonic synthesizer with morphing, modulation matrix, and built-in effects", Price = 2499.00m, StockQuantity = 4, IsActive = true, BrandId = brandsDict["arturia"], CategoryId = catsDict["polyphonic"] },
+                new() { Name = "Korg Minilogue XD", Slug = "korg-minilogue-xd", Description = "4-voice analog polyphonic synthesizer with multi-engine, effects, and built-in sequencer", Price = 33990.00m, StockQuantity = 8, IsActive = true, BrandId = brandsDict["korg"], CategoryId = catsDict["polyphonic"] },
+                new() { Name = "Arturia PolyBrute", Slug = "arturia-polybrute", Description = "6-voice fully analog polyphonic synthesizer with morphing, modulation matrix, and built-in effects", Price = 109839.00m, StockQuantity = 4, IsActive = true, BrandId = brandsDict["arturia"], CategoryId = catsDict["polyphonic"] },
 
                 // Монофонічні аналогові
-                new() { Name = "Moog Subsequent 37", Slug = "moog-subsequent-37", Description = "Paraphonic analog synthesizer with classic Moog ladder filter and multidrive", Price = 1799.00m, StockQuantity = 5, IsActive = true, BrandId = brandsDict["moog"], CategoryId = catsDict["monophonic"] },
-                new() { Name = "Korg Minilogue XD (DeepMind clone vibe)", Slug = "korg-deepmind-vibe", Description = "12-voice analog polyphonic synthesizer with TC Electronic effects and DSP processor", Price = 699.00m, StockQuantity = 7, IsActive = true, BrandId = brandsDict["korg"], CategoryId = catsDict["monophonic"] },
+                new() { Name = "Moog Subsequent 37", Slug = "moog-subsequent-37", Description = "Paraphonic analog synthesizer with classic Moog ladder filter and multidrive", Price = 101200.00m, StockQuantity = 5, IsActive = true, BrandId = brandsDict["moog"], CategoryId = catsDict["monophonic"] },
+                new() { Name = "Korg Minilogue XD (DeepMind clone vibe)", Slug = "korg-deepmind-vibe", Description = "12-voice analog polyphonic synthesizer with TC Electronic effects and DSP processor", Price = 28929.00m, StockQuantity = 7, IsActive = true, BrandId = brandsDict["korg"], CategoryId = catsDict["monophonic"] },
 
                 // Цифрові / Гібридні
-                new() { Name = "Roland JD-Xi", Slug = "roland-jd-xi", Description = "Hybrid synthesizer with digital engines, vocoder, microphone input, and full sequencer", Price = 599.00m, StockQuantity = 10, IsActive = true, BrandId = brandsDict["roland"], CategoryId = catsDict["digital-hybrid-synths"] },
-                new() { Name = "Korg Opsix", Slug = "korg-opsix", Description = "FM synthesizer with 6 operators and reimagined FM synthesis approach", Price = 799.00m, StockQuantity = 6, IsActive = true, BrandId = brandsDict["korg"], CategoryId = catsDict["digital-hybrid-synths"] },
+                new() { Name = "Roland JD-Xi", Slug = "roland-jd-xi", Description = "Hybrid synthesizer with digital engines, vocoder, microphone input, and full sequencer", Price = 30429.00m, StockQuantity = 10, IsActive = true, BrandId = brandsDict["roland"], CategoryId = catsDict["digital-hybrid-synths"] },
+                new() { Name = "Korg Opsix", Slug = "korg-opsix", Description = "FM synthesizer with 6 operators and reimagined FM synthesis approach", Price = 23000.00m, StockQuantity = 6, IsActive = true, BrandId = brandsDict["korg"], CategoryId = catsDict["digital-hybrid-synths"] },
 
                 // Студійні навушники
-                new() { Name = "Sennheiser HD 25", Slug = "sennheiser-hd-25", Description = "Closed-back DJ headphones with high sound isolation and replaceable parts", Price = 149.00m, StockQuantity = 30, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["studio-headphones"] },
-                new() { Name = "Sennheiser HD 280 Pro", Slug = "sennheiser-hd-280-pro", Description = "Professional studio monitoring headphones with flat frequency response and detachable cable", Price = 169.00m, StockQuantity = 25, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["studio-headphones"] },
+                new() { Name = "Sennheiser HD 25", Slug = "sennheiser-hd-25", Description = "Closed-back DJ headphones with high sound isolation and replaceable parts", Price = 5999.00m, StockQuantity = 30, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["studio-headphones"] },
+                new() { Name = "Sennheiser HD 280 Pro", Slug = "sennheiser-hd-280-pro", Description = "Professional studio monitoring headphones with flat frequency response and detachable cable", Price = 4049.00m, StockQuantity = 25, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["studio-headphones"] },
 
                 // Студійні монітори
-                new() { Name = "Kali Audio LP-6 v2", Slug = "kali-lp-6-v2", Description = "6.5-inch active nearfield studio monitors with accurate sound reproduction and boundary EQ", Price = 159.00m, StockQuantity = 20, IsActive = true, BrandId = brandsDict["kali-audio"], CategoryId = catsDict["studio-monitors"] },
-                new() { Name = "Yamaha HS8", Slug = "yamaha-hs8", Description = "8-inch studio monitors with room control and high-precision sound reproduction", Price = 249.00m, StockQuantity = 12, IsActive = true, BrandId = brandsDict["yamaha"], CategoryId = catsDict["studio-monitors"] },
+                new() { Name = "Kali Audio LP-6 v2", Slug = "kali-lp-6-v2", Description = "6.5-inch active nearfield studio monitors with accurate sound reproduction and boundary EQ", Price = 9919.00m, StockQuantity = 20, IsActive = true, BrandId = brandsDict["kali-audio"], CategoryId = catsDict["studio-monitors"] },
+                new() { Name = "Yamaha HS8", Slug = "yamaha-hs8", Description = "8-inch studio monitors with room control and high-precision sound reproduction", Price = 13429.00m, StockQuantity = 12, IsActive = true, BrandId = brandsDict["yamaha"], CategoryId = catsDict["studio-monitors"] },
 
                 // Мікрофони
-                new() { Name = "Shure SM7B", Slug = "shure-sm7b", Description = "Dynamic microphone with legendary sound for vocals, podcasts, and broadcasting", Price = 399.00m, StockQuantity = 12, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["microphones"] },
-                new() { Name = "Rode NT1 5th Gen", Slug = "rode-nt1-5th-gen", Description = "Large-diaphragm condenser microphone with ultra-low noise and USB/XLR outputs", Price = 249.00m, StockQuantity = 18, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["microphones"] }
+                new() { Name = "Shure SM7B", Slug = "shure-sm7b", Description = "Dynamic microphone with legendary sound for vocals, podcasts, and broadcasting", Price = 18809.00m, StockQuantity = 12, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["microphones"] },
+                new() { Name = "Rode NT1 5th Gen", Slug = "rode-nt1-5th-gen", Description = "Large-diaphragm condenser microphone with ultra-low noise and USB/XLR outputs", Price = 10349.00m, StockQuantity = 18, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["microphones"] },
+
+                // Електрогітари
+                new() { Name = "Fender Player Stratocaster HSS", Slug = "fender-player-stratocaster-hss", Description = "Classic Stratocaster with HSS pickup configuration, maple neck, and vintage-style tremolo system for versatile rock tones", Price = 23249.00m, StockQuantity = 15, IsActive = true, BrandId = brandsDict["fender"], CategoryId = catsDict["electric-guitars"] },
+                new() { Name = "Ibanez RG550 Genesis", Slug = "ibanez-rg550-genesis", Description = "High-performance superstrat with wizard neck, Edge tremolo, and powerful Ibanez V7/S1/V8 pickups for metal and shred", Price = 16720.00m, StockQuantity = 10, IsActive = true, BrandId = brandsDict["ibanez"], CategoryId = catsDict["electric-guitars"] },
+
+                // Електричні скрипки
+                new() { Name = "Yamaha YEV-104 BL", Slug = "yamaha-yev-104-bl", Description = "4-string electric violin with solid spruce body, ebony fingerboard, and built-in piezo pickup for authentic acoustic tone", Price = 28086.00m, StockQuantity = 8, IsActive = true, BrandId = brandsDict["yamaha-electric"], CategoryId = catsDict["electric-violins"] },
+                new() { Name = "NS Design WAV-5 Electric Violin", Slug = "ns-design-wav-5", Description = "5-string electric violin with active polar pickup system, carbon fiber construction, and wireless capabilities", Price = 58440.00m, StockQuantity = 5, IsActive = true, BrandId = brandsDict["ns-design"], CategoryId = catsDict["electric-violins"] },
+
+                // DJ пульт
+                new() { Name = "Pioneer DDJ-FLX4", Slug = "pioneer-ddj-flx4", Description = "2-channel DJ controller compatible with rekordbox, Serato DJ Lite, and djay, featuring Smart CFX and Smart Fader", Price = 329.00m, StockQuantity = 20, IsActive = true, BrandId = brandsDict["pioneer-dj"], CategoryId = catsDict["dj-equipment"] }
             };
 
             context.Products.AddRange(products);

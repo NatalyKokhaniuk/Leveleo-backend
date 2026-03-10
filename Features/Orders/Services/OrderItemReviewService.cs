@@ -4,13 +4,16 @@ using LeveLEO.Features.Orders.DTO;
 using LeveLEO.Features.Orders.Models;
 using LeveLEO.Features.Products.DTO;
 using LeveLEO.Infrastructure.Media.Services;
+using LeveLEO.Infrastructure.Events;
+using LeveLEO.Infrastructure.Events.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeveLEO.Features.Orders.Services;
 
 public class OrderItemReviewService(
     AppDbContext db,
-    IMediaService mediaService) : IOrderItemReviewService
+    IMediaService mediaService,
+    IEventBus eventBus) : IOrderItemReviewService
 {
     #region Create & Update
 
@@ -115,7 +118,21 @@ public class OrderItemReviewService(
             .Reference(r => r.OrderItem)
             .Query()
             .Include(oi => oi.Product)
+            .Include(oi => oi.Order)
+                .ThenInclude(o => o.User)
             .LoadAsync();
+
+        // Публікуємо подію про створення відгуку
+        await eventBus.PublishAsync(new ReviewCreatedEvent
+        {
+            ReviewId = review.Id,
+            OrderItemId = review.OrderItemId,
+            ProductId = review.OrderItem.ProductId,
+            UserId = review.OrderItem.Order.UserId,
+            UserEmail = review.OrderItem.Order.User.Email!,
+            Rating = review.Rating,
+            ReviewText = review.Comment
+        });
 
         return MapToDto(review);
     }
@@ -373,6 +390,9 @@ public class OrderItemReviewService(
         var review = await db.OrderItemReviews
             .Include(r => r.OrderItem)
                 .ThenInclude(oi => oi.Product)
+            .Include(r => r.OrderItem)
+                .ThenInclude(oi => oi.Order)
+                    .ThenInclude(o => o.User)
             .Include(r => r.Photos)
             .Include(r => r.Videos)
             .FirstOrDefaultAsync(r => r.Id == reviewId)
@@ -387,6 +407,16 @@ public class OrderItemReviewService(
 
         await db.SaveChangesAsync();
 
+        // Публікуємо подію про схвалення відгуку
+        await eventBus.PublishAsync(new ReviewApprovedEvent
+        {
+            ReviewId = review.Id,
+            ProductId = review.OrderItem.ProductId,
+            UserId = review.OrderItem.Order.UserId,
+            UserEmail = review.OrderItem.Order.User.Email!,
+            Rating = review.Rating
+        });
+
         return MapToDto(review);
     }
 
@@ -395,6 +425,9 @@ public class OrderItemReviewService(
         var review = await db.OrderItemReviews
             .Include(r => r.OrderItem)
                 .ThenInclude(oi => oi.Product)
+            .Include(r => r.OrderItem)
+                .ThenInclude(oi => oi.Order)
+                    .ThenInclude(o => o.User)
             .Include(r => r.Photos)
             .Include(r => r.Videos)
             .FirstOrDefaultAsync(r => r.Id == reviewId)
@@ -408,6 +441,14 @@ public class OrderItemReviewService(
         review.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync();
+
+        // Публікуємо подію про відхилення відгуку
+        await eventBus.PublishAsync(new ReviewRejectedEvent
+        {
+            ReviewId = review.Id,
+            UserId = review.OrderItem.Order.UserId,
+            UserEmail = review.OrderItem.Order.User.Email!
+        });
 
         return MapToDto(review);
     }
@@ -436,6 +477,21 @@ public class OrderItemReviewService(
             TotalCount = totalCount,
             Items = [.. reviews.Select(MapToDto)]
         };
+    }
+
+    public async Task<List<ReviewResponseDto>> GetFeaturedReviewsForHomepageAsync()
+    {
+        var reviews = await db.OrderItemReviews
+            .Include(r => r.OrderItem)
+                .ThenInclude(oi => oi.Product)
+            .Include(r => r.Photos)
+            .Include(r => r.Videos)
+            .Where(r => r.IsApproved && r.Rating == 5 && r.OrderItem.Product.IsActive && r.OrderItem.Product.StockQuantity > 0)
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(5)
+            .ToListAsync();
+
+        return [.. reviews.Select(MapToDto)];
     }
 
     #endregion Admin Actions

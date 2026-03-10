@@ -1,11 +1,13 @@
 ﻿using dotenv.net;
 using LeveLEO.Data;
+using LeveLEO.Features.AdminTasks.Services;
 using LeveLEO.Features.AttributeGroups.Services;
 using LeveLEO.Features.Brands.Services;
 using LeveLEO.Features.Categories.Services;
 using LeveLEO.Features.Identity.Models;
 using LeveLEO.Features.Identity.Services;
 using LeveLEO.Features.Inventory.Services;
+using LeveLEO.Features.Notifications.EventHandlers;
 using LeveLEO.Features.Orders.Services;
 using LeveLEO.Features.Payments.Services;
 using LeveLEO.Features.ProductAttributes.Services;
@@ -13,10 +15,13 @@ using LeveLEO.Features.Products.Services;
 using LeveLEO.Features.Promotions.Services;
 using LeveLEO.Features.Shipping.Services;
 using LeveLEO.Features.ShoppingCarts.Services;
+using LeveLEO.Features.Statistics.Services;
 using LeveLEO.Features.UserProductRelations.Services;
 using LeveLEO.Features.Users.Services;
 using LeveLEO.Infrastructure.Delivery;
 using LeveLEO.Infrastructure.Email;
+using LeveLEO.Infrastructure.Events;
+using LeveLEO.Infrastructure.Events.DomainEvents;
 using LeveLEO.Infrastructure.Media.Services;
 using LeveLEO.Infrastructure.Payments;
 using LeveLEO.Infrastructure.SlugGenerator;
@@ -96,7 +101,10 @@ builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
 builder.Services.AddScoped<IUserProductRelationService, UserProductRelationService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
-
+// Admin Tasks
+builder.Services.AddScoped<IAdminTaskService, AdminTaskService>();
+// Statistics
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 // Infrastructure services
 builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
@@ -106,6 +114,21 @@ builder.Services.AddScoped<ISlugGenerator, SlugGenerator>();
 builder.Services.AddScoped<ILiqPayService, LiqPayService>();
 builder.Services.AddHttpClient<INovaPoshtaService, NovaPoshtaService>();
 builder.Services.AddScoped<IProductMediaService, ProductMediaService>();
+
+// Event Bus
+builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+// Event Handlers - Email
+builder.Services.AddScoped<OrderCreatedEmailHandler>();
+builder.Services.AddScoped<OrderPaidEmailHandler>();
+builder.Services.AddScoped<OrderShippedEmailHandler>();
+builder.Services.AddScoped<OrderCompletedEmailHandler>();
+builder.Services.AddScoped<ReviewApprovedEmailHandler>();
+builder.Services.AddScoped<ReviewRejectedEmailHandler>();
+// Event Handlers - Admin Tasks
+builder.Services.AddScoped<ReviewCreatedTaskHandler>();
+builder.Services.AddScoped<OrderPaidTaskHandler>();
+builder.Services.AddScoped<PaymentMismatchTaskHandler>();
+
 // CONTROLLERS
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -159,7 +182,7 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
-//await DatabaseSeeder.SeedAsync(app);
+await DatabaseSeeder.SeedAsync(app);
 app.UseMiddleware<GlobalExceptionHandler>();
 
 if (!app.Environment.IsDevelopment())
@@ -169,46 +192,39 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (app.Environment.IsDevelopment())
+app.MapScalarApiReference(options =>
 {
-    app.MapScalarApiReference(options =>
+    options.Title = "LeveLEO API Документація";
+    options.WithTheme(ScalarTheme.Kepler);
+    //    options.Servers = new List<ScalarServer>
+    //{
+    //    new ScalarServer("http://localhost:5158", "Локальний сервер")
+    //};
+
+    options.AddHttpAuthentication("Bearer", scheme =>
     {
-        options.Title = "LeveLEO API Документація";
-        options.WithTheme(ScalarTheme.Kepler);
-        //    options.Servers = new List<ScalarServer>
-        //{
-        //    new ScalarServer("http://localhost:5158", "Локальний сервер")
-        //};
-
-        options.AddHttpAuthentication("Bearer", scheme =>
-        {
-        });
-
-        options.AddPreferredSecuritySchemes("Bearer");
     });
-    var transformer = new BearerSecuritySchemeTransformer();
 
-    app.MapOpenApi();
-}
-//app.MapScalarApiReference(options =>
-//{
-//    options.Title = "LeveLEO API Документація";
-//    options.WithTheme(ScalarTheme.Kepler);
-//    //    options.Servers = new List<ScalarServer>
-//    //{
-//    //    new ScalarServer("http://localhost:5158", "Локальний сервер")
-//    //};
+    options.AddPreferredSecuritySchemes("Bearer");
+});
+var transformer = new BearerSecuritySchemeTransformer();
 
-//    options.AddHttpAuthentication("Bearer", scheme =>
-//    {
-//    });
-
-//    options.AddPreferredSecuritySchemes("Bearer");
-//});
-//var transformer = new BearerSecuritySchemeTransformer();
-
-//app.MapOpenApi();
+app.MapOpenApi();
 
 app.MapControllers();
+// Підписуємо обробники подій
+var eventBus = app.Services.GetRequiredService<IEventBus>();
 
+// Email notifications
+eventBus.Subscribe<OrderCreatedEvent, OrderCreatedEmailHandler>();
+eventBus.Subscribe<OrderPaidEvent, OrderPaidEmailHandler>();
+eventBus.Subscribe<OrderShippedEvent, OrderShippedEmailHandler>();
+eventBus.Subscribe<OrderCompletedEvent, OrderCompletedEmailHandler>();
+eventBus.Subscribe<ReviewApprovedEvent, ReviewApprovedEmailHandler>();
+eventBus.Subscribe<ReviewRejectedEvent, ReviewRejectedEmailHandler>();
+
+// Admin task creation
+eventBus.Subscribe<ReviewCreatedEvent, ReviewCreatedTaskHandler>();
+eventBus.Subscribe<OrderPaidEvent, OrderPaidTaskHandler>();
+eventBus.Subscribe<PaymentOrderMismatchEvent, PaymentMismatchTaskHandler>();
 app.Run();

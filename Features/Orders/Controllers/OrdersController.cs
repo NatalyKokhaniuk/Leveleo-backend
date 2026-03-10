@@ -1,6 +1,7 @@
 ﻿using LeveLEO.Features.Orders.DTO;
 using LeveLEO.Features.Orders.Models;
 using LeveLEO.Features.Orders.Services;
+using LeveLEO.Features.Products.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -80,6 +81,18 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         [FromQuery] DateTimeOffset? endDate = null)
     {
         var orders = await orderService.GetByUserIdAsync(userId, startDate, endDate);
+        return Ok(orders);
+    }
+
+    /// <summary>
+    /// Отримати всі замовлення з фільтрацією та сортуванням
+    /// Доступно: тільки адміністратори
+    /// </summary>
+    [HttpGet("admin/all")]
+    [Authorize(Roles = "Admin,Moderator")]
+    public async Task<ActionResult<PagedResultDto<OrderListItemDto>>> GetAllOrders([FromQuery] AdminOrderFilterDto filter)
+    {
+        var orders = await orderService.GetAllOrdersAsync(filter);
         return Ok(orders);
     }
 

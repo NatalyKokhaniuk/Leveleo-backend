@@ -15,6 +15,8 @@ using LeveLEO.Features.ShoppingCarts;
 using LeveLEO.Features.ShoppingCarts.DTO;
 using LeveLEO.Features.ShoppingCarts.Services;
 using LeveLEO.Infrastructure.Payments;
+using LeveLEO.Infrastructure.Events;
+using LeveLEO.Infrastructure.Events.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Text.Json;
@@ -27,7 +29,8 @@ public class OrderService(
     IInventoryService inventoryService,
     IPaymentService paymentService,
     IProductService productService,
-    IAddressService addressService) : IOrderService
+    IAddressService addressService,
+    IEventBus eventBus) : IOrderService
 {
     private static readonly TimeSpan PayloadValidity = TimeSpan.FromMinutes(10);
 
@@ -228,6 +231,17 @@ public class OrderService(
             await db.SaveChangesAsync();
 
             await tx.CommitAsync();
+
+            // Публікуємо подію про створення замовлення
+            await eventBus.PublishAsync(new OrderCreatedEvent
+            {
+                OrderId = order.Id,
+                OrderNumber = order.Number,
+                UserId = order.UserId,
+                UserEmail = order.User.Email!,
+                TotalPayable = order.TotalPayable
+            });
+
             // Запускаємо фонову задачу для перевірки платежу після закінчення терміну
             _ = Task.Run(async () =>
             {
@@ -294,6 +308,16 @@ public class OrderService(
 
                         await db.SaveChangesAsync();
                         await tx.CommitAsync();
+
+                        // Публікуємо подію про оплату замовлення
+                        await eventBus.PublishAsync(new OrderPaidEvent
+                        {
+                            OrderId = order.Id,
+                            OrderNumber = order.Number,
+                            UserId = order.UserId,
+                            UserEmail = order.User.Email!,
+                            AmountPaid = paymentResponseDto.Amount
+                        });
                     }
                     catch
                     {
@@ -305,7 +329,15 @@ public class OrderService(
                 {
                     // Платіж успішний, але статус замовлення PaymentFailed
                     // Потрібно повідомити адміністратора про необхідність повернення коштів
-                    // TODO: Додати логування або відправку повідомлення адміністратору!!!!!!!
+                    await eventBus.PublishAsync(new PaymentOrderMismatchEvent
+                    {
+                        OrderId = order.Id,
+                        PaymentId = paymentId,
+                        OrderNumber = order.Number,
+                        UserId = order.UserId,
+                        Reason = "Payment succeeded but order is in PaymentFailed status. Manual intervention required."
+                    });
+
                     throw new ApiException(
                         "PAYMENT_ORDER_MISMATCH",
                         "Payment succeeded but order is in PaymentFailed status. Manual intervention required.",
@@ -414,6 +446,9 @@ public class OrderService(
     public async Task NotifyDeliveryUpdated(Guid orderId, DeliveryStatus deliveryStatus)
     {
         var order = await db.Orders
+            .Include(o => o.User)
+            .Include(o => o.Delivery)
+            .Include(o => o.OrderItems)
             .FirstOrDefaultAsync(o => o.Id == orderId)
             ?? throw new ApiException(
                 "ORDER_NOT_FOUND",
@@ -431,6 +466,17 @@ public class OrderService(
                 if (order.Status == OrderStatus.Processing)
                 {
                     order.Status = OrderStatus.Shipped;
+                    await db.SaveChangesAsync();
+
+                    // Публікуємо подію про відправку
+                    await eventBus.PublishAsync(new OrderShippedEvent
+                    {
+                        OrderId = order.Id,
+                        OrderNumber = order.Number,
+                        UserId = order.UserId,
+                        UserEmail = order.User.Email!,
+                        TrackingNumber = order.Delivery?.TrackingNumber
+                    });
                 }
                 break;
 
@@ -438,15 +484,87 @@ public class OrderService(
                 if (order.Status == OrderStatus.Shipped || order.Status == OrderStatus.Processing)
                 {
                     order.Status = OrderStatus.Completed;
+                    await db.SaveChangesAsync();
+
+                    // Публікуємо подію про завершення замовлення
+                    await eventBus.PublishAsync(new OrderCompletedEvent
+                    {
+                        OrderId = order.Id,
+                        OrderNumber = order.Number,
+                        UserId = order.UserId,
+                        UserEmail = order.User.Email!,
+                        ProductIds = [.. order.OrderItems.Select(oi => oi.ProductId)]
+                    });
                 }
                 break;
 
             case DeliveryStatus.Canceled:
-                // Можливо, потрібно якось обробити невдалу доставку!!!
+                // TODO: Додати обробку скасованої доставки
                 break;
         }
+    }
 
-        await db.SaveChangesAsync();
+    public async Task<PagedResultDto<OrderListItemDto>> GetAllOrdersAsync(AdminOrderFilterDto filter)
+    {
+        var query = db.Orders
+            .Include(o => o.Address)
+            .AsQueryable();
+
+        // Фільтрація по статусу
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(o => o.Status == filter.Status.Value);
+        }
+
+        // Фільтрація по датах
+        if (filter.StartDate.HasValue)
+        {
+            query = query.Where(o => o.CreatedAt >= filter.StartDate.Value);
+        }
+
+        if (filter.EndDate.HasValue)
+        {
+            query = query.Where(o => o.CreatedAt <= filter.EndDate.Value);
+        }
+
+        // Сортування
+        query = filter.SortBy?.ToLower() switch
+        {
+            "totalpayable" => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(o => o.TotalPayable)
+                : query.OrderByDescending(o => o.TotalPayable),
+            "status" => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(o => o.Status)
+                : query.OrderByDescending(o => o.Status),
+            _ => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(o => o.CreatedAt)
+                : query.OrderByDescending(o => o.CreatedAt)
+        };
+
+        var totalCount = await query.CountAsync();
+
+        var orders = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        var items = orders.Select(o => new OrderListItemDto
+        {
+            Id = o.Id,
+            Number = o.Number,
+            CreatedAt = o.CreatedAt,
+            Status = o.Status,
+            TotalPayable = o.TotalPayable,
+            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}"
+        }).ToList();
+
+        return new PagedResultDto<OrderListItemDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = filter.Page,
+            PageSize = filter.PageSize
+        };
     }
 
     private async Task<string> GenerateOrderNumberAsync()
