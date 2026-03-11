@@ -43,4 +43,30 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
         var html = File.ReadAllText(path);
         return html.Replace("{{CONFIRMATION_LINK}}", confirmationLink);
     }
+
+    public async Task<string> GetTemplateAsync(string templateName, Dictionary<string, string> replacements)
+    {
+        var path = Path.Combine(
+            env.ContentRootPath,
+            "Infrastructure",
+            "Email",
+            "Templates",
+            $"{templateName}.html"
+        );
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Email template '{templateName}.html' not found");
+        }
+
+        var html = await File.ReadAllTextAsync(path);
+
+        // Замінюємо всі плейсхолдери
+        foreach (var replacement in replacements)
+        {
+            html = html.Replace(replacement.Key, replacement.Value);
+        }
+
+        return html;
+    }
 }

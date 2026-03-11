@@ -13,6 +13,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080;
+    depends_on:
+      - redis
   redis:
     image: redis:7-alpine
     container_name: leveleo-redis

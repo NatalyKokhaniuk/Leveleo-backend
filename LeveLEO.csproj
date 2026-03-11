@@ -57,6 +57,7 @@
 
   <ItemGroup>
     <None Include="C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\.editorconfig" />
+    <None Include="Tests\LeveLEO.Tests.csproj" />
   </ItemGroup>
 
 </Project>

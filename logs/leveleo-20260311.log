@@ -1,0 +1,32 @@
+2026-03-11 21:55:01.502 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-11 21:55:01.600 +02:00 [INF] [] ℹ️ Using InMemory cache (Redis not configured)
+2026-03-11 21:55:03.613 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'RefreshToken'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:03.622 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'Order'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:03.625 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'CouponAssignment'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:03.627 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserAddress'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:03.630 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'ShoppingCart'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:03.633 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserComparison'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:03.636 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserFavorite'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-11 21:55:52.683 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-11 21:55:52.688 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-11 21:55:52.693 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-11 21:55:52.696 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-11 21:55:52.700 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-11 21:55:52.702 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-11 21:55:52.704 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-11 21:55:52.706 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-11 21:55:52.709 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-11 21:55:52.711 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-11 21:55:52.714 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-11 21:55:52.991 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-11 21:55:53.037 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-11 21:55:53.040 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-11 21:55:53.043 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-11 21:55:58.109 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar responded 302 in 31.8226 ms
+2026-03-11 21:55:58.180 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 53.4509 ms
+2026-03-11 21:55:58.227 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 200 in 2.8044 ms
+2026-03-11 21:55:58.246 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 200 in 33.2098 ms
+2026-03-11 21:55:58.806 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 193.4439 ms
+2026-03-11 21:55:58.986 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 180.0929 ms
+2026-03-11 21:56:02.849 +02:00 [WRN] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /favicon.ico responded 404 in 0.2821 ms
+2026-03-11 22:02:57.574 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application is shutting down...

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<body style='font-family: Arial, sans-serif; background: #f4f4f4; padding: 30px;'>
+    <div style='max-width: 600px; margin: auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);'>
+        <h1 style='color: #10b981; text-align: center;'>✅ Оплату отримано!</h1>
+        <p style='font-size: 16px; color: #444;'>Ваше замовлення успішно оплачено.</p>
+        
+        <div style='background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;'>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Номер замовлення:</strong> {{ORDER_NUMBER}}</p>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Оплачена сума:</strong> <span style='color: #10b981; font-size: 18px; font-weight: bold;'>{{AMOUNT_PAID}}</span></p>
+        </div>
+        
+        <p style='font-size: 15px; color: #444;'>Ми розпочинаємо підготовку вашого замовлення до відправки. Незабаром ви отримаєте повідомлення про відправку.</p>
+        
+        <div style='margin: 30px 0; text-align: center;'>
+            <a href='{{ORDER_LINK}}' style='background: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; display: inline-block;'>
+                Відстежити замовлення
+            </a>
+        </div>
+        
+        <hr style='border: 0; border-top: 1px solid #eee; margin: 40px 0;'>
+        <p style='color: #888; font-size: 14px; text-align: center;'>З повагою,<br>Команда LeveLEO 🎸</p>
+    </div>
+</body>
+</html>

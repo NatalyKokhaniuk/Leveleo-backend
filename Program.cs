@@ -18,10 +18,12 @@ using LeveLEO.Features.ShoppingCarts.Services;
 using LeveLEO.Features.Statistics.Services;
 using LeveLEO.Features.UserProductRelations.Services;
 using LeveLEO.Features.Users.Services;
+using LeveLEO.Infrastructure.Caching;
 using LeveLEO.Infrastructure.Delivery;
 using LeveLEO.Infrastructure.Email;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
+using LeveLEO.Infrastructure.Logging;
 using LeveLEO.Infrastructure.Media.Services;
 using LeveLEO.Infrastructure.Payments;
 using LeveLEO.Infrastructure.SlugGenerator;
@@ -35,25 +37,35 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Scalar.AspNetCore;
-using Swashbuckle.AspNetCore;
-using Swashbuckle.AspNetCore.Swagger;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using Serilog;
+using StackExchange.Redis;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
+// Завантажуємо .env файл (якщо не в контейнері)
 if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
 {
     DotEnv.Load();
 }
+
 var builder = WebApplication.CreateBuilder(args);
 
-// DB
+// =====================================================
+// SERILOG LOGGING - конфігуруємо на самому початку
+// =====================================================
+builder.ConfigureSerilog();
+
+// =====================================================
+// DATABASE
+// =====================================================
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// =====================================================
+// IDENTITY
+// =====================================================
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
@@ -62,12 +74,14 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.User.RequireUniqueEmail = true;
-
-    options.SignIn.RequireConfirmedEmail = true; // Вимагаємо підтвердження email
+    options.SignIn.RequireConfirmedEmail = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
-// JWT SETTINGS
+
+// =====================================================
+// JWT AUTHENTICATION
+// =====================================================
 var jwtSettings = new JwtSettings
 {
     Secret = Environment.GetEnvironmentVariable("JWT_SECRET")!,
@@ -76,65 +90,9 @@ var jwtSettings = new JwtSettings
     AccessTokenExpirationMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_ACCESS_EXP") ?? "15"),
     RefreshTokenExpirationDays = int.Parse(Environment.GetEnvironmentVariable("JWT_REFRESH_EXP") ?? "7")
 };
-builder.Services.AddHttpClient();
+
 builder.Services.AddSingleton(jwtSettings);
-// Auth / Security services / User
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
 
-builder.Services.AddScoped<ISocialAuthService, SocialAuthService>();
-
-// Feature services
-builder.Services.AddScoped<IAttributeGroupService, AttributeGroupService>();
-builder.Services.AddScoped<IBrandService, BrandService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IInventoryService, InventoryService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<IOrderItemReviewService, OrderItemReviewService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<ICouponAssignmentService, CouponAssignmentService>();
-builder.Services.AddScoped<IPromotionService, PromotionService>();
-builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
-builder.Services.AddScoped<IUserProductRelationService, UserProductRelationService>();
-builder.Services.AddScoped<IAddressService, AddressService>();
-builder.Services.AddScoped<IDeliveryService, DeliveryService>();
-// Admin Tasks
-builder.Services.AddScoped<IAdminTaskService, AdminTaskService>();
-// Statistics
-builder.Services.AddScoped<IStatisticsService, StatisticsService>();
-// Infrastructure services
-builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
-builder.Services.AddTransient<IEmailSender, EmailSender>();
-builder.Services.AddTransient<ISmsSender, SmsSender>();
-builder.Services.AddScoped<IMediaService, MediaService>();
-builder.Services.AddScoped<ISlugGenerator, SlugGenerator>();
-builder.Services.AddScoped<ILiqPayService, LiqPayService>();
-builder.Services.AddHttpClient<INovaPoshtaService, NovaPoshtaService>();
-builder.Services.AddScoped<IProductMediaService, ProductMediaService>();
-
-// Event Bus
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
-// Event Handlers - Email
-builder.Services.AddScoped<OrderCreatedEmailHandler>();
-builder.Services.AddScoped<OrderPaidEmailHandler>();
-builder.Services.AddScoped<OrderShippedEmailHandler>();
-builder.Services.AddScoped<OrderCompletedEmailHandler>();
-builder.Services.AddScoped<ReviewApprovedEmailHandler>();
-builder.Services.AddScoped<ReviewRejectedEmailHandler>();
-// Event Handlers - Admin Tasks
-builder.Services.AddScoped<ReviewCreatedTaskHandler>();
-builder.Services.AddScoped<OrderPaidTaskHandler>();
-builder.Services.AddScoped<PaymentMismatchTaskHandler>();
-
-// CONTROLLERS
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -156,63 +114,177 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 });
-//builder.Services.AddAuthorization(options => { options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build(); });
-
-//builder.Services.AddControllers()
-//    .AddJsonOptions(options =>
-//    {
-//      options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-//    });
 
 builder.Services.AddAuthorizationBuilder()
-                                                                                                                                                                                                                                                                                                                                                                  //builder.Services.AddAuthorization(options => { options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build(); });//builder.Services.AddControllers()//    .AddJsonOptions(options =>//    {//      options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());//    });
-                                                                                                                                                                                                                                                                                                                                                                  .SetDefaultPolicy(new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+    .SetDefaultPolicy(new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
         .RequireAuthenticatedUser()
         .Build());
+
+// =====================================================
+// REDIS CACHING (якщо доступний) або In-Memory
+// =====================================================
+var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION");
+
+if (!string.IsNullOrEmpty(redisConnection))
+{
+    try
+    {
+        var redis = ConnectionMultiplexer.Connect(redisConnection);
+        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+        Log.Information("✅ Redis caching enabled: {RedisConnection}", redisConnection);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "⚠️ Redis connection failed, falling back to InMemory cache");
+        builder.Services.AddMemoryCache();
+        builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
+    }
+}
+else
+{
+    // Fallback до InMemory якщо Redis не налаштований
+    builder.Services.AddMemoryCache();
+    builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
+    Log.Information("ℹ️ Using InMemory cache (Redis not configured)");
+}
+
+// =====================================================
+// HTTP CLIENT
+// =====================================================
+builder.Services.AddHttpClient();
+
+// =====================================================
+// AUTH & USER SERVICES
+// =====================================================
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISocialAuthService, SocialAuthService>();
+
+// =====================================================
+// FEATURE SERVICES
+// =====================================================
+builder.Services.AddScoped<IAttributeGroupService, AttributeGroupService>();
+builder.Services.AddScoped<IBrandService, BrandService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderItemReviewService, OrderItemReviewService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
+
+// ProductService з декоратором для кешування
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<IProductService>(provider =>
+{
+    var inner = provider.GetRequiredService<ProductService>();
+    var cache = provider.GetRequiredService<ICacheService>();
+    var logger = provider.GetRequiredService<ILogger<CachedProductService>>();
+    return new CachedProductService(inner, cache, logger);
+});
+
+builder.Services.AddScoped<ICouponAssignmentService, CouponAssignmentService>();
+builder.Services.AddScoped<IPromotionService, PromotionService>();
+builder.Services.AddScoped<IShoppingCartService, ShoppingCartService>();
+builder.Services.AddScoped<IUserProductRelationService, UserProductRelationService>();
+builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<IDeliveryService, DeliveryService>();
+builder.Services.AddScoped<IAdminTaskService, AdminTaskService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
+
+// =====================================================
+// INFRASTRUCTURE SERVICES
+// =====================================================
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+builder.Services.AddTransient<IEmailSender, EmailSender>();
+builder.Services.AddTransient<ISmsSender, SmsSender>();
+builder.Services.AddScoped<IMediaService, MediaService>();
+builder.Services.AddScoped<ISlugGenerator, SlugGenerator>();
+builder.Services.AddScoped<ILiqPayService, LiqPayService>();
+builder.Services.AddHttpClient<INovaPoshtaService, NovaPoshtaService>();
+builder.Services.AddScoped<IProductMediaService, ProductMediaService>();
+
+// =====================================================
+// EVENT BUS & HANDLERS
+// =====================================================
+builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+
+// Email Handlers
+builder.Services.AddScoped<OrderCreatedEmailHandler>();
+builder.Services.AddScoped<OrderPaidEmailHandler>();
+builder.Services.AddScoped<OrderShippedEmailHandler>();
+builder.Services.AddScoped<OrderCompletedEmailHandler>();
+builder.Services.AddScoped<ReviewApprovedEmailHandler>();
+builder.Services.AddScoped<ReviewRejectedEmailHandler>();
+
+// Admin Task Handlers
+builder.Services.AddScoped<ReviewCreatedTaskHandler>();
+builder.Services.AddScoped<OrderPaidTaskHandler>();
+builder.Services.AddScoped<PaymentMismatchTaskHandler>();
+
+// =====================================================
+// CONTROLLERS & API
+// =====================================================
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer(new BearerSecuritySchemeTransformer());
-    options.AddOperationTransformer((operation, context, cancellationToken) =>
-    {
-        Console.WriteLine($"Processing endpoint: {context.Description.ActionDescriptor.DisplayName}");
-        return Task.CompletedTask;
-    });
 });
 
 builder.Services.AddEndpointsApiExplorer();
 
+// =====================================================
+// BUILD APP
+// =====================================================
 var app = builder.Build();
-await DatabaseSeeder.SeedAsync(app);
+
+// =====================================================
+// SEEDING (тільки Development)
+// =====================================================
+if (app.Environment.IsDevelopment())
+{
+    await DatabaseSeeder.SeedAsync(app);
+}
+
+// =====================================================
+// MIDDLEWARE
+// =====================================================
 app.UseMiddleware<GlobalExceptionHandler>();
+
+// Serilog HTTP Request Logging
+app.UseSerilogRequestLogging();
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+// =====================================================
+// API DOCUMENTATION
+// =====================================================
 app.MapScalarApiReference(options =>
 {
     options.Title = "LeveLEO API Документація";
     options.WithTheme(ScalarTheme.Kepler);
-    //    options.Servers = new List<ScalarServer>
-    //{
-    //    new ScalarServer("http://localhost:5158", "Локальний сервер")
-    //};
-
-    options.AddHttpAuthentication("Bearer", scheme =>
-    {
-    });
-
+    options.AddHttpAuthentication("Bearer", scheme => { });
     options.AddPreferredSecuritySchemes("Bearer");
 });
-var transformer = new BearerSecuritySchemeTransformer();
 
 app.MapOpenApi();
-
 app.MapControllers();
-// Підписуємо обробники подій
+
+// =====================================================
+// ПІДПИСКА НА ПОДІЇ
+// =====================================================
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 
 // Email notifications
@@ -227,4 +299,22 @@ eventBus.Subscribe<ReviewRejectedEvent, ReviewRejectedEmailHandler>();
 eventBus.Subscribe<ReviewCreatedEvent, ReviewCreatedTaskHandler>();
 eventBus.Subscribe<OrderPaidEvent, OrderPaidTaskHandler>();
 eventBus.Subscribe<PaymentOrderMismatchEvent, PaymentMismatchTaskHandler>();
-app.Run();
+
+Log.Information("✅ Event handlers subscribed successfully");
+
+// =====================================================
+// RUN APP
+// =====================================================
+try
+{
+    Log.Information("🚀 Starting LeveLEO application...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "❌ Application terminated unexpectedly");
+}
+finally
+{
+    SerilogConfiguration.EnsureSerilogFlushed();
+}

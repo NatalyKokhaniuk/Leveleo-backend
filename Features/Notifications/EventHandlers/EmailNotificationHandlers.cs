@@ -1,9 +1,8 @@
 using LeveLEO.Infrastructure.Email;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LeveLEO.Features.Notifications.EventHandlers;
 
@@ -20,13 +19,15 @@ public class OrderCreatedEmailHandler(
         try
         {
             var subject = $"Замовлення #{@event.OrderNumber} створено";
-            var body = $@"
-                <h2>Дякуємо за замовлення!</h2>
-                <p>Ваше замовлення <strong>#{@event.OrderNumber}</strong> успішно створено.</p>
-                <p>Сума до оплати: <strong>{@event.TotalPayable:C}</strong></p>
-                <p>Будь ласка, завершіть оплату для обробки замовлення.</p>
-                <p>З повагою,<br/>Команда LeveLEO</p>
-            ";
+
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{ORDER_NUMBER}}", @event.OrderNumber },
+                { "{{TOTAL_PAYABLE}}", $"{@event.TotalPayable:C}" },
+                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+            };
+
+            var body = await templateService.GetTemplateAsync("OrderCreated", replacements);
 
             await emailSender.SendEmailAsync(@event.UserEmail, subject, body);
             logger.LogInformation("Order created email sent to {Email} for order {OrderNumber}",
@@ -44,6 +45,7 @@ public class OrderCreatedEmailHandler(
 /// </summary>
 public class OrderPaidEmailHandler(
     IEmailSender emailSender,
+    IEmailTemplateService templateService,
     ILogger<OrderPaidEmailHandler> logger) : IEventHandler<OrderPaidEvent>
 {
     public async Task HandleAsync(OrderPaidEvent @event)
@@ -51,13 +53,15 @@ public class OrderPaidEmailHandler(
         try
         {
             var subject = $"Замовлення #{@event.OrderNumber} оплачено";
-            var body = $@"
-                <h2>Оплату отримано!</h2>
-                <p>Ваше замовлення <strong>#{@event.OrderNumber}</strong> успішно оплачено.</p>
-                <p>Сума: <strong>{@event.AmountPaid:C}</strong></p>
-                <p>Ми розпочинаємо підготовку вашого замовлення до відправки.</p>
-                <p>З повагою,<br/>Команда LeveLEO</p>
-            ";
+
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{ORDER_NUMBER}}", @event.OrderNumber },
+                { "{{AMOUNT_PAID}}", $"{@event.AmountPaid:C}" },
+                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+            };
+
+            var body = await templateService.GetTemplateAsync("OrderPaid", replacements);
 
             await emailSender.SendEmailAsync(@event.UserEmail, subject, body);
             logger.LogInformation("Order paid email sent to {Email} for order {OrderNumber}",
@@ -75,6 +79,7 @@ public class OrderPaidEmailHandler(
 /// </summary>
 public class OrderShippedEmailHandler(
     IEmailSender emailSender,
+    IEmailTemplateService templateService,
     ILogger<OrderShippedEmailHandler> logger) : IEventHandler<OrderShippedEvent>
 {
     public async Task HandleAsync(OrderShippedEvent @event)
@@ -82,17 +87,19 @@ public class OrderShippedEmailHandler(
         try
         {
             var subject = $"Замовлення #{@event.OrderNumber} відправлено";
-            var trackingInfo = !string.IsNullOrEmpty(@event.TrackingNumber)
-                ? $"<p>Номер відстеження: <strong>{@event.TrackingNumber}</strong></p>"
-                : "";
 
-            var body = $@"
-                <h2>Ваше замовлення в дорозі!</h2>
-                <p>Замовлення <strong>#{@event.OrderNumber}</strong> відправлено.</p>
-                {trackingInfo}
-                <p>Ви можете відстежити статус доставки в особистому кабінеті.</p>
-                <p>З повагою,<br/>Команда LeveLEO</p>
-            ";
+            var trackingInfo = !string.IsNullOrEmpty(@event.TrackingNumber)
+                ? $"<p style='margin: 8px 0; font-size: 14px;'><strong>Номер відстеження (ТТН):</strong> <span style='color: #f59e0b; font-weight: bold;'>{@event.TrackingNumber}</span></p>"
+                : "<p style='margin: 8px 0; font-size: 14px; color: #888;'>Номер ТТН буде доступний незабаром</p>";
+
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{ORDER_NUMBER}}", @event.OrderNumber },
+                { "{{TRACKING_INFO}}", trackingInfo },
+                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+            };
+
+            var body = await templateService.GetTemplateAsync("OrderShipped", replacements);
 
             await emailSender.SendEmailAsync(@event.UserEmail, subject, body);
             logger.LogInformation("Order shipped email sent to {Email} for order {OrderNumber}",
@@ -110,6 +117,7 @@ public class OrderShippedEmailHandler(
 /// </summary>
 public class OrderCompletedEmailHandler(
     IEmailSender emailSender,
+    IEmailTemplateService templateService,
     ILogger<OrderCompletedEmailHandler> logger) : IEventHandler<OrderCompletedEvent>
 {
     public async Task HandleAsync(OrderCompletedEvent @event)
@@ -117,13 +125,14 @@ public class OrderCompletedEmailHandler(
         try
         {
             var subject = $"Замовлення #{@event.OrderNumber} доставлено";
-            var body = $@"
-                <h2>Замовлення доставлено!</h2>
-                <p>Ваше замовлення <strong>#{@event.OrderNumber}</strong> успішно доставлено.</p>
-                <p>Дякуємо, що обрали LeveLEO!</p>
-                <p>Будемо вдячні, якщо ви залишите відгук про товари в особистому кабінеті.</p>
-                <p>З повагою,<br/>Команда LeveLEO</p>
-            ";
+
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{ORDER_NUMBER}}", @event.OrderNumber },
+                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+            };
+
+            var body = await templateService.GetTemplateAsync("OrderCompleted", replacements);
 
             await emailSender.SendEmailAsync(@event.UserEmail, subject, body);
             logger.LogInformation("Order completed email sent to {Email} for order {OrderNumber}",
@@ -141,6 +150,7 @@ public class OrderCompletedEmailHandler(
 /// </summary>
 public class ReviewApprovedEmailHandler(
     IEmailSender emailSender,
+    IEmailTemplateService templateService,
     ILogger<ReviewApprovedEmailHandler> logger) : IEventHandler<ReviewApprovedEvent>
 {
     public async Task HandleAsync(ReviewApprovedEvent @event)
@@ -148,12 +158,13 @@ public class ReviewApprovedEmailHandler(
         try
         {
             var subject = "Ваш відгук опубліковано";
-            var body = $@"
-                <h2>Відгук схвалено!</h2>
-                <p>Ваш відгук успішно пройшов модерацію та опублікований на сайті.</p>
-                <p>Дякуємо за вашу думку!</p>
-                <p>З повагою,<br/>Команда LeveLEO</p>
-            ";
+
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{PRODUCT_LINK}}", $"https://leveleo.com/products/{@event.ProductId}" }
+            };
+
+            var body = await templateService.GetTemplateAsync("ReviewApproved", replacements);
 
             await emailSender.SendEmailAsync(@event.UserEmail, subject, body);
             logger.LogInformation("Review approved email sent to {Email} for review {ReviewId}",
@@ -171,6 +182,7 @@ public class ReviewApprovedEmailHandler(
 /// </summary>
 public class ReviewRejectedEmailHandler(
     IEmailSender emailSender,
+    IEmailTemplateService templateService,
     ILogger<ReviewRejectedEmailHandler> logger) : IEventHandler<ReviewRejectedEvent>
 {
     public async Task HandleAsync(ReviewRejectedEvent @event)
@@ -178,12 +190,13 @@ public class ReviewRejectedEmailHandler(
         try
         {
             var subject = "Про ваш відгук";
-            var body = $@"
-                <h2>Відгук не пройшов модерацію</h2>
-                <p>На жаль, ваш відгук не відповідає правилам публікації на нашому сайті.</p>
-                <p>Будь ласка, переконайтесь, що відгук стосується товару та не містить неприйнятного контенту.</p>
-                <p>З повагою,<br/>Команда LeveLEO</p>
-            ";
+
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{ORDER_LINK}}", $"https://leveleo.com/my-reviews" }
+            };
+
+            var body = await templateService.GetTemplateAsync("ReviewRejected", replacements);
 
             await emailSender.SendEmailAsync(@event.UserEmail, subject, body);
             logger.LogInformation("Review rejected email sent to {Email} for review {ReviewId}",
