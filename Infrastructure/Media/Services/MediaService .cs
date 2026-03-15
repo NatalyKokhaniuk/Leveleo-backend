@@ -53,10 +53,10 @@ public class MediaService : IMediaService
         await _s3.DeleteObjectAsync(_bucket, key);
     }
 
-    // === Pre-signed URL метод ===
+    
     public Task<string> GetFileUrlAsync(string key, TimeSpan? expiresIn = null)
     {
-        var expiry = expiresIn ?? TimeSpan.FromDays(365); // дефолт 365 дней
+        var expiry = expiresIn ?? TimeSpan.FromDays(365); 
 
         var request = new GetPreSignedUrlRequest
         {
@@ -87,7 +87,6 @@ public class MediaService : IMediaService
             {
                 listResponse = await _s3.ListObjectsV2Async(listRequest);
 
-                // Защита от возможного null у S3Objects
                 if (listResponse.S3Objects != null && listResponse.S3Objects.Count != 0)
                 {
                     var deleteObjects = listResponse.S3Objects.Select(obj => new KeyVersion { Key = obj.Key }).ToList();
@@ -103,7 +102,7 @@ public class MediaService : IMediaService
                 }
 
                 listRequest.ContinuationToken = listResponse.NextContinuationToken;
-                // Безопасная проверка nullable булевого значения
+
             } while (listResponse.IsTruncated == true);
 
             Console.WriteLine("Бакет очищено повністю.");
