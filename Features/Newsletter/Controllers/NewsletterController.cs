@@ -58,7 +58,6 @@ public class NewsletterController : ControllerBase
 
         var result = await _newsletterService.UnsubscribeByTokenAsync(token);
         
-        // Повертаємо HTML сторінку з повідомленням
         var html = $@"
 <!DOCTYPE html>
 <html>
