@@ -72,7 +72,7 @@ public class AuthService(
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var confirmationLink = $"{backendBaseUrl.TrimEnd('/')}/api/auth/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
         var htmlMessage = emailTemplateService.GetRegistrationConfirmationEmail(confirmationLink);
-        await emailSender.SendEmailAsync(user.Email!, "Повторне підтвердження реєстрації в LeveLEO", htmlMessage);
+        await emailSender.SendEmailAsync(request.Email, "Повторне підтвердження реєстрації в LeveLEO", htmlMessage);
     }
 
     // ================== LOGIN / LOGOUT ==================
@@ -114,7 +114,7 @@ public class AuthService(
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(30), 
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
             User = user
         };
@@ -409,7 +409,7 @@ public class AuthService(
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(30), 
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
             User = user
         };
@@ -462,7 +462,6 @@ public class AuthService(
     {
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
-
 
         var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
 
