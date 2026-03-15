@@ -20,10 +20,9 @@ public class MediaController(IMediaService mediaService) : ControllerBase
 
         var fileName = $"{Guid.NewGuid()}_{file.FileName}";
 
-        // Завантажуємо файл на S3/B2
         var key = await mediaService.UploadFileAsync(file.OpenReadStream(), fileName, file.ContentType);
 
-        // Генеруємо тимчасовий pre-signed URL на 30 хв
+        // тимчасовий pre-signed URL на 30 хв
         //var tempUrl = await _mediaService.GetFileUrlAsync(fileName, TimeSpan.FromMinutes(30));
         // Генеруємо публічне посилання
         var url = mediaService.GetPermanentUrl(key);
