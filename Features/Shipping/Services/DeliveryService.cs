@@ -19,7 +19,6 @@ public class DeliveryService(
 {
     public async Task<DeliveryResponseDto> CreateDeliveryAsync(Guid orderId)
     {
-        // Отримуємо замовлення
         var order = await db.Orders
             .Include(o => o.Address)
             .Include(o => o.OrderItems)
@@ -48,7 +47,6 @@ public class DeliveryService(
 
         var address = order.Address;
 
-        // Створюємо ЕН в Новій Пошті
         var createDocumentDto = new CreateInternetDocumentDto
         {
             DateTime = NovaPoshtaHelpers.FormatDate(DateTimeOffset.Now),
@@ -98,10 +96,7 @@ public class DeliveryService(
 
         try
         {
-            // Створюємо накладну
             var npDocument = await novaPoshtaService.CreateInternetDocumentAsync(createDocumentDto);
-
-            // Зберігаємо в БД
             var delivery = new Delivery
             {
                 OrderId = orderId,
@@ -120,7 +115,6 @@ public class DeliveryService(
 
             await db.SaveChangesAsync();
 
-            // Повідомляємо OrderService
             await orderService.NotifyDeliveryUpdated(orderId, DeliveryStatus.Shipped);
 
             logger.LogInformation(
@@ -197,7 +191,6 @@ public class DeliveryService(
             .FirstOrDefaultAsync(d => d.Id == deliveryId)
             ?? throw new ApiException("DELIVERY_NOT_FOUND", "Delivery not found.", 404);
 
-        // Отримуємо актуальний статус з НП
         var trackingEvents = await novaPoshtaService.TrackParcelAsync(delivery.TrackingNumber);
 
         if (trackingEvents.Count > 0)
@@ -205,10 +198,8 @@ public class DeliveryService(
             var latestEvent = trackingEvents[0];
             var oldStatus = delivery.Status;
 
-            // Мапимо статус НП
             delivery.Status = MapNovaPoshtaStatus(latestEvent.StatusCode);
 
-            // Якщо доставлено
             if (delivery.Status == DeliveryStatus.Delivered && delivery.ActualDeliveryDate == null)
             {
                 delivery.ActualDeliveryDate = DateTimeOffset.UtcNow;
@@ -217,7 +208,6 @@ public class DeliveryService(
             delivery.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
 
-            // Повідомляємо OrderService про зміну
             if (oldStatus != delivery.Status)
             {
                 await orderService.NotifyDeliveryUpdated(delivery.OrderId, delivery.Status);
