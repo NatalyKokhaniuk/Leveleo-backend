@@ -6,18 +6,21 @@ using LeveLEO.Features.Products.Models;
 using LeveLEO.Features.Promotions.DTO;
 using LeveLEO.Features.Promotions.Models;
 using LeveLEO.Features.Promotions.Services;
+using LeveLEO.Infrastructure.Events;
+using LeveLEO.Infrastructure.Events.DomainEvents;
 using LeveLEO.Infrastructure.Media.Services;
 using LeveLEO.Infrastructure.SlugGenerator;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeveLEO.Features.Products.Services;
 
-public class ProductService(AppDbContext db, IMediaService mediaService, IPromotionService promotionService, IInventoryService inventoryService) : IProductService
+public class ProductService(AppDbContext db, IMediaService mediaService, IPromotionService promotionService, IInventoryService inventoryService, IEventBus eventBus) : IProductService
 {
     private readonly AppDbContext _db = db;
     private readonly IMediaService _mediaService = mediaService;
     private readonly IPromotionService _promotionService = promotionService;
     private readonly IInventoryService _inventoryService = inventoryService;
+    private readonly IEventBus _eventBus = eventBus;
 
     #region CRUD Categories
 
@@ -48,6 +51,15 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
         await _db.SaveChangesAsync();
 
         var aggregates = await GetAggregatesAsync(product.Id);
+        await _eventBus.PublishAsync(new ProductCreatedEvent
+        {
+            ProductId = product.Id,
+            ProductName = product.Name,
+            ProductSlug = product.Slug,
+            Price = product.Price,
+            MainImageUrl = product.MainImageKey,
+            ShortDescription = product.Description
+        });
         return await MapToDtoAsync(product, aggregates.AverageRating, aggregates.TotalSold, aggregates.RatingCount);
     }
 

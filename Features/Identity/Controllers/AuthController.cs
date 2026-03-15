@@ -258,12 +258,12 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
 
     [HttpDelete("delete-account")]
     [Authorize]
-    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequestDto request)
+    public async Task<IActionResult> DeleteAccount()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? throw new ApiException("UNAUTHORIZED", "Unauthorized", 401);
 
-        await authService.DeleteAccountAsync(userId, request.ConfirmEmail);
+        await authService.DeleteAccountAsync(userId);
 
         // Видаляємо cookie refreshToken на клієнті
         if (Request.Cookies.ContainsKey("refreshToken"))

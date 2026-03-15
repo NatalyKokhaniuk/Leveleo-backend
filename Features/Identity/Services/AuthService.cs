@@ -505,14 +505,10 @@ public class AuthService(
         await userManager.UpdateSecurityStampAsync(user);
     }
 
-    public async Task DeleteAccountAsync(string userId, string confirmEmail)
+    public async Task DeleteAccountAsync(string userId)
     {
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
-
-        // Перевірка, чи користувач дійсно підтвердив свій намір
-        if (!string.Equals(user.Email, confirmEmail, StringComparison.OrdinalIgnoreCase))
-            throw new ApiException("EMAIL_MISMATCH", "Email does not match", 400);
 
         // Очищення полів для анонімізації
         user.Email = $"deleted_{Guid.NewGuid()}@example.com";

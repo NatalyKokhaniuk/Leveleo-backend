@@ -7,6 +7,8 @@ using LeveLEO.Features.Categories.Services;
 using LeveLEO.Features.Identity.Models;
 using LeveLEO.Features.Identity.Services;
 using LeveLEO.Features.Inventory.Services;
+using LeveLEO.Features.Newsletter.EventHandlers;
+using LeveLEO.Features.Newsletter.Services;
 using LeveLEO.Features.Notifications.EventHandlers;
 using LeveLEO.Features.Orders.Services;
 using LeveLEO.Features.Payments.Services;
@@ -222,6 +224,10 @@ builder.Services.AddScoped<ReviewRejectedEmailHandler>();
 builder.Services.AddScoped<ReviewCreatedTaskHandler>();
 builder.Services.AddScoped<OrderPaidTaskHandler>();
 builder.Services.AddScoped<PaymentMismatchTaskHandler>();
+// Newsletter Event Handlers
+builder.Services.AddScoped<ProductCreatedNewsletterHandler>();
+builder.Services.AddScoped<PromotionCreatedNewsletterHandler>();
+builder.Services.AddScoped<INewsletterService, NewsletterService>();
 
 // =====================================================
 // CONTROLLERS & API
@@ -299,6 +305,9 @@ eventBus.Subscribe<ReviewRejectedEvent, ReviewRejectedEmailHandler>();
 eventBus.Subscribe<ReviewCreatedEvent, ReviewCreatedTaskHandler>();
 eventBus.Subscribe<OrderPaidEvent, OrderPaidTaskHandler>();
 eventBus.Subscribe<PaymentOrderMismatchEvent, PaymentMismatchTaskHandler>();
+// Newsletter events
+eventBus.Subscribe<ProductCreatedEvent, ProductCreatedNewsletterHandler>();
+eventBus.Subscribe<PromotionCreatedEvent, PromotionCreatedNewsletterHandler>();
 
 Log.Information("✅ Event handlers subscribed successfully");
 

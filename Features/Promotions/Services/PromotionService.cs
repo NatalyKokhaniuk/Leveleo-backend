@@ -3,13 +3,16 @@ using LeveLEO.Features.Products.Models;
 using LeveLEO.Features.Promotions.DTO;
 using LeveLEO.Features.Promotions.Models;
 using LeveLEO.Features.ShoppingCarts.DTO;
+using LeveLEO.Infrastructure.Events;
+using LeveLEO.Infrastructure.Events.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeveLEO.Features.Promotions.Services;
 
-public class PromotionService(AppDbContext db) : IPromotionService
+public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionService
 {
     private readonly AppDbContext _db = db;
+    private readonly IEventBus _eventBus = eventBus;
 
     #region CRUD
 
@@ -50,7 +53,18 @@ public class PromotionService(AppDbContext db) : IPromotionService
 
         _db.Promotions.Add(promotion);
         await _db.SaveChangesAsync();
-
+        await _eventBus.PublishAsync(new PromotionCreatedEvent
+        {
+            PromotionId = promotion.Id,
+            PromotionName = promotion.Name,
+            Description = promotion.Description,
+            ImageKey = promotion.ImageKey,
+            DiscountValue = promotion.DiscountValue ?? 0,
+            DiscountType = promotion.DiscountType?.ToString() ?? "Percentage",
+            StartDate = promotion.StartDate,
+            EndDate = promotion.EndDate,
+            CouponCode = promotion.CouponCode
+        });
         return MapToDto(promotion);
     }
 

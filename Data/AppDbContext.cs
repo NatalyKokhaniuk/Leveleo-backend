@@ -4,6 +4,7 @@ using LeveLEO.Features.Brands.Models;
 using LeveLEO.Features.Categories.Models;
 using LeveLEO.Features.Identity.Models;
 using LeveLEO.Features.Inventory.Models;
+using LeveLEO.Features.Newsletter.Models;
 using LeveLEO.Features.Orders.Models;
 using LeveLEO.Features.Payments.Models;
 using LeveLEO.Features.ProductAttributes.Models;
@@ -56,7 +57,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<Delivery> Deliveries => Set<Delivery>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
-
+    public DbSet<NewsletterSubscriber> NewsletterSubscribers => Set<NewsletterSubscriber>();
     public DbSet<Payment> Payments => Set<Payment>();
 
     //translations for 6 entities
@@ -520,6 +521,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             .HasIndex(p => p.BrandId);
 
         #endregion Global Query Filters
+
+        // -------------------------
+        // NewsLetter Subscribers
+        // -------------------------
+        builder.Entity<NewsletterSubscriber>()
+            .HasIndex(n => n.Email)
+            .IsUnique();
+
+        builder.Entity<NewsletterSubscriber>()
+            .HasIndex(n => n.UnsubscribeToken)
+            .IsUnique();
 
         // ───────────────────────────────────────────────────────────────
         // КОНФІГУРАЦІЯ OWNED TYPES у Promotion: ProductLevelCondition та CartLevelCondition
