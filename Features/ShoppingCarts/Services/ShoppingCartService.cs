@@ -39,7 +39,6 @@ public class ShoppingCartService(
 
             if (available == 0)
             {
-                // видаляємо товар з кошика
                 cart.Items.Remove(item);
                 removedItems.Add(await MapToDtoAsync(item));
                 db.ShoppingCartItems.Remove(item);
@@ -53,11 +52,9 @@ public class ShoppingCartService(
 
         await db.SaveChangesAsync();
 
-        // Далі застосовуємо акції через PromotionService
         var itemDtos = await Task.WhenAll(cart.Items.Select(MapToDtoAsync));
         var promoResult = await promotion.ApplyCartPromotionAsync(itemDtos, cart.CouponCode, userId);
 
-        // Повертаємо дто з інформацією про видалені та скориговані айтеми
         return new ShoppingCartDto
         {
             Id = cart.Id,
@@ -103,7 +100,7 @@ public class ShoppingCartService(
                 CartId = cart.Id,
                 ProductId = productId,
                 Quantity = quantity,
-                PriceAfterProductPromotion = discontedPrice, // буде обчислено пізніше
+                PriceAfterProductPromotion = discontedPrice, 
                 PriceAfterCartPromotion = discontedPrice
             };
             cart.Items.Add(item);
@@ -112,7 +109,6 @@ public class ShoppingCartService(
 
         await db.SaveChangesAsync();
 
-        // Повертаємо повний ProductResponseDto
         return await MapToDtoAsync(cart.Items.First(i => i.ProductId == productId));
     }
 
@@ -174,7 +170,6 @@ public class ShoppingCartService(
             .ThenInclude(i => i.Product)
             .FirstOrDefaultAsync(c => c.UserId == userId) ?? throw new ApiException("CART_NOT_FOUND", "Shopping cart not found.", 404);
 
-        // Просто присвоюємо купон
         cart.CouponCode = couponCode;
         await db.SaveChangesAsync();
         return await GetCalculatedCartAsync(userId);
