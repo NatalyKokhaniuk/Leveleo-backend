@@ -27,7 +27,7 @@ public class CachedProductService(
 
     public Task<List<ProductResponseDto>> BuildFullDtosAsync(IEnumerable<Guid> productIds)
     {
-        // Не кешуємо batch операції
+        // Не кешувати batch операції
         return inner.BuildFullDtosAsync(productIds);
     }
 
@@ -59,7 +59,7 @@ public class CachedProductService(
         await InvalidateProductCacheAsync();
     }
 
-    // READ - with caching (БЕЗ languageCode - його немає в інтерфейсі!)
+    // READ - with caching 
     public async Task<ProductResponseDto> GetByIdAsync(Guid productId)
     {
         var key = CacheKeys.Product(productId);
@@ -84,13 +84,13 @@ public class CachedProductService(
 
     public async Task<PagedResultDto<ProductResponseDto>> GetAllAsync(ProductFilterDto filter)
     {
-        // Списки НЕ кешуємо
+        // Списки НЕ кешувати
         return await inner.GetAllAsync(filter);
     }
 
     public async Task<PagedResultDto<ProductResponseDto>> SearchAsync(string query, int page = 1, int pageSize = 20)
     {
-        // Пошук НЕ кешуємо
+        // Пошук НЕ кешувати
         return await inner.SearchAsync(query, page, pageSize);
     }
 
