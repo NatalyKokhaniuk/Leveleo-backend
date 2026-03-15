@@ -48,10 +48,8 @@ public class OrderService(
                 404
             );
 
-        // Оновлюємо статус платежу, якщо потрібно
         await RefreshPaymentStatusIfNeededAsync(order);
 
-        // Якщо платіж є — підтягуємо свіжі дані (опціонально, якщо потрібно)
         if (order.PaymentId != null)
         {
             _ = await paymentService.GetPaymentByIdAsync((Guid)order.PaymentId);
@@ -74,7 +72,6 @@ public class OrderService(
                 404
             );
 
-        // Оновлюємо статус платежу, якщо потрібно
         await RefreshPaymentStatusIfNeededAsync(order);
 
         if (order.PaymentId != null)
@@ -98,15 +95,13 @@ public class OrderService(
 
         var orders = await query
             .OrderByDescending(o => o.CreatedAt)
-            .ToListAsync(); // спочатку завантажуємо повні об’єкти
+            .ToListAsync(); 
 
-        // Оновлюємо статус платежів для всіх знайдених замовлень
         foreach (var order in orders)
         {
             await RefreshPaymentStatusIfNeededAsync(order);
         }
 
-        // Тепер мапимо в DTO після можливого оновлення
         return [.. orders.Select(o => new OrderListItemDto
         {
             Id = o.Id,
@@ -157,7 +152,6 @@ public class OrderService(
 
     public async Task<CreateOrderResultDto> CreateOrderFromCartAsync(string userId, OrderCreateDto orderCreateDto, string serverUrl)
     {
-        // Перевіряємо адресу користувача
         var addressExists = await db.UserAddresses
             .AnyAsync(a => a.AddressId == orderCreateDto.UserAddressId && a.UserId == userId);
 
@@ -168,7 +162,6 @@ public class OrderService(
                 404
             );
 
-        // Отримуємо актуальний кошик через сервіс
         var cart = await cartService.GetCalculatedCartAsync(userId);
 
         if (cart.CartAdjusted || (cart.RemovedItems != null && cart.RemovedItems.Count > 0))
@@ -192,7 +185,6 @@ public class OrderService(
 
         try
         {
-            // створюємо замовлення
             var order = new Order
             {
                 Number = await GenerateOrderNumberAsync(),
@@ -223,7 +215,6 @@ public class OrderService(
             {
                 await inventoryService.ReserveAsync(item.ProductId, order.Id, item.Quantity, PayloadValidity);
             }
-            // Створюємо платіж
             var payment = await paymentService.CreatePaymentAsync(order, PayloadValidity, serverUrl);
 
             order.PaymentId = payment.PaymentId;
@@ -232,7 +223,6 @@ public class OrderService(
 
             await tx.CommitAsync();
 
-            // Публікуємо подію про створення замовлення
             await eventBus.PublishAsync(new OrderCreatedEvent
             {
                 OrderId = order.Id,
@@ -242,7 +232,6 @@ public class OrderService(
                 TotalPayable = order.TotalPayable
             });
 
-            // Запускаємо фонову задачу для перевірки платежу після закінчення терміну
             _ = Task.Run(async () =>
             {
                 await Task.Delay(PayloadValidity + TimeSpan.FromMinutes(5));
@@ -293,23 +282,19 @@ public class OrderService(
                     using var tx = await db.Database.BeginTransactionAsync();
                     try
                     {
-                        // Змінюємо статус замовлення
                         order.Status = OrderStatus.Processing;
                         order.UpdatedAt = DateTimeOffset.UtcNow;
 
-                        // Підтверджуємо резервування (списуємо зі складу)
                         foreach (var item in order.OrderItems)
                         {
                             await inventoryService.ConfirmReservationAsync(item.ProductId, order.Id);
                         }
 
-                        // Очищаємо кошик користувача
                         await cartService.ClearCartAsync(order.UserId);
 
                         await db.SaveChangesAsync();
                         await tx.CommitAsync();
 
-                        // Публікуємо подію про оплату замовлення
                         await eventBus.PublishAsync(new OrderPaidEvent
                         {
                             OrderId = order.Id,
@@ -352,10 +337,8 @@ public class OrderService(
                     using var tx = await db.Database.BeginTransactionAsync();
                     try
                     {
-                        // Змінюємо статус замовлення
                         order.Status = OrderStatus.PaymentFailed;
 
-                        // Скасовуємо резервування
                         foreach (var item in order.OrderItems)
                         {
                             await inventoryService.ReleaseAsync(item.ProductId, order.Id);
@@ -385,13 +368,12 @@ public class OrderService(
 
     private async Task<OrderDetailDto> MapToDetailDtoAsync(Order order)
     {
-        // Загружаем все product DTO одним запросом через сервис продуктов
         var productIds = order.OrderItems?.Select(oi => oi.ProductId).Distinct().ToList() ?? [];
         var products = productIds.Count > 0
             ? await productService.BuildFullDtosAsync(productIds)
             : [];
         var productDict = products.ToDictionary(p => p.Id);
-        //
+        
         return new OrderDetailDto
         {
             Id = order.Id,
@@ -434,7 +416,7 @@ public class OrderService(
                     Id = oi.Id,
                     ProductId = oi.ProductId,
                     OrderId = oi.OrderId,
-                    ProductName = prodDto.Name, // без null
+                    ProductName = prodDto.Name,
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
                     DiscountedUnitPrice = oi.DiscountedUnitPrice,
@@ -467,8 +449,7 @@ public class OrderService(
                 {
                     order.Status = OrderStatus.Shipped;
                     await db.SaveChangesAsync();
-
-                    // Публікуємо подію про відправку
+                    
                     await eventBus.PublishAsync(new OrderShippedEvent
                     {
                         OrderId = order.Id,
@@ -486,7 +467,6 @@ public class OrderService(
                     order.Status = OrderStatus.Completed;
                     await db.SaveChangesAsync();
 
-                    // Публікуємо подію про завершення замовлення
                     await eventBus.PublishAsync(new OrderCompletedEvent
                     {
                         OrderId = order.Id,
@@ -612,7 +592,7 @@ public class OrderService(
     {
         if (!order.PaymentId.HasValue || order.Payment?.Status != PaymentStatus.Pending)
         {
-            return; // нічого не треба оновлювати
+            return; 
         }
 
         var freshPayment = await paymentService.GetPaymentByIdAsync(order.PaymentId.Value);
@@ -621,11 +601,9 @@ public class OrderService(
             return; // статус не змінився або платіж не знайдено
         }
 
-        // Оновлюємо статус платежу в базі
         order.Payment.Status = freshPayment.Status;
         await db.SaveChangesAsync();
 
-        // Якщо платіж успішний і замовлення ще в Pending — переводимо в Processing
         if (freshPayment.Status == PaymentStatus.Success && order.Status == OrderStatus.Pending)
         {
             order.Status = OrderStatus.Processing;
