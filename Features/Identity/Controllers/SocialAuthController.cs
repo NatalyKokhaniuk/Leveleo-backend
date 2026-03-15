@@ -20,7 +20,6 @@ public class SocialAuthController(IWebHostEnvironment env, ISocialAuthService so
         var tempToken = socialAuthService.GenerateTemporaryToken(user);
         var redirectUrl = socialAuthService.GetFrontendRedirectUrl(tempToken);
 
-        // Повертаємо редірект
         return Ok(new { redirectUrl });
     }
 
@@ -33,7 +32,6 @@ public class SocialAuthController(IWebHostEnvironment env, ISocialAuthService so
         var tempToken = socialAuthService.GenerateTemporaryToken(user);
         var redirectUrl = socialAuthService.GetFrontendRedirectUrl(tempToken);
 
-        // Повертаємо редірект
         return Ok(new { redirectUrl });
     }
 
@@ -41,17 +39,13 @@ public class SocialAuthController(IWebHostEnvironment env, ISocialAuthService so
     [AllowAnonymous]
     public async Task<IActionResult> ExchangeTemporaryToken([FromBody] ExchangeTempTokenRequestDto request)
     {
-        // Валідовуємо тимчасовий токен
         var userId = jwtService.ValidateTemporaryToken(request.TempToken);
 
-        // Витягуємо юзера
         var user = await userManager.FindByIdAsync(userId)
                    ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
-        // Генеруємо повноцінні токени
         var (authResponse, refreshToken) = await authService.GenerateAuthResponseAsync(user);
 
-        // Ставимо refreshToken в cookie
         if (!string.IsNullOrEmpty(refreshToken))
         {
             var isLocal = env.IsDevelopment();
@@ -64,6 +58,6 @@ public class SocialAuthController(IWebHostEnvironment env, ISocialAuthService so
             });
         }
 
-        return Ok(authResponse); // повертаємо accessToken та інші дані юзера
+        return Ok(authResponse); 
     }
 }
