@@ -48,7 +48,6 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
 
         var oldParentId = category.ParentId;
 
-        // Name
         if (dto.Name.HasValue && dto.Name.Value != category.Name)
         {
             category.Name = dto.Name.Value!;
@@ -58,19 +57,16 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
                 x => x.Slug);
         }
 
-        // Description (можна очищати)
         if (dto.Description.HasValue)
         {
             category.Description = dto.Description.Value;
         }
 
-        // ParentId (можна зробити root)
         if (dto.ParentId.HasValue)
         {
             category.ParentId = dto.ParentId.Value;
         }
 
-        // IsActive
         if (dto.IsActive.HasValue)
         {
             category.IsActive = dto.IsActive.Value;
@@ -78,7 +74,6 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
 
         await db.SaveChangesAsync();
 
-        // Перебудова closure тільки якщо реально змінено parent
         if (dto.ParentId.HasValue && dto.ParentId.Value != oldParentId)
         {
             await RebuildClosureAsync(category);
@@ -95,7 +90,6 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
             .Include(c => c.Products)
             .FirstOrDefaultAsync(c => c.Id == categoryId) ?? throw new ApiException("CATEGORY_NOT_FOUND", $"Category with Id '{categoryId}' not found.", 404);
 
-        // Отримуємо всіх нащадків через Closure
         var descendantIds = await db.CategoryClosures
             .Where(c => c.AncestorId == categoryId)
             .Select(c => c.DescendantId)
@@ -318,7 +312,6 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
 
     private async Task UpdateClosureForNewCategory(Category category)
     {
-        // Додаємо саму себе
         db.CategoryClosures.Add(new CategoryClosure
         {
             AncestorId = category.Id,
