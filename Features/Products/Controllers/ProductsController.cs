@@ -12,7 +12,6 @@ namespace LeveLEO.Features.Products.Controllers;
 [Route("api/[controller]")]
 public class ProductsController(IProductService service) : ControllerBase
 {
-    // Кэшированный экземпляр JsonSerializerOptions для повторного использования (фикс для CA1869).
     private static readonly JsonSerializerOptions s_jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -125,7 +124,7 @@ public class ProductsController(IProductService service) : ControllerBase
                 throw new ApiException(
                     "INVALID_FILTERS_PARAMETER",
                     "Invalid filters parameter. Ensure it's a valid Base64-encoded JSON string.",
-                    400 // краще 400, бо це Bad Request
+                    400 
                 );
             }
         }
