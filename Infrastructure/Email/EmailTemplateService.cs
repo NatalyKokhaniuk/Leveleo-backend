@@ -61,7 +61,6 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
 
         var html = await File.ReadAllTextAsync(path);
 
-        // Замінюємо всі плейсхолдери
         foreach (var replacement in replacements)
         {
             html = html.Replace(replacement.Key, replacement.Value);
