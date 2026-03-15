@@ -59,5 +59,10 @@
     <None Include="C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\.editorconfig" />
     <None Include="Tests\LeveLEO.Tests.csproj" />
   </ItemGroup>
+	<ItemGroup>
+		<Content Include="Infrastructure\Email\Templates\**\*.html">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
 </Project>

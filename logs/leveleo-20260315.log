@@ -205,3 +205,35 @@ System.InvalidOperationException: Unable to resolve service for type 'LeveLEO.Fe
 2026-03-15 15:14:40.598 +02:00 [WRN] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/Products responded 200 in 9786.1977 ms
 2026-03-15 15:14:52.296 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/ProductAttributeValues/product/689d9c7a-2142-47af-aa0b-0a4376c79d7c responded 200 in 310.0524 ms
 2026-03-15 15:15:21.317 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/ProductAttributes/70ec0feb-baee-4a95-910a-99f6c3e31d83 responded 200 in 243.8895 ms
+2026-03-15 22:15:31.198 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-15 22:15:31.253 +02:00 [INF] [] ℹ️ Using InMemory cache (Redis not configured)
+2026-03-15 22:15:32.548 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-15 22:15:32.553 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-15 22:15:32.556 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-15 22:15:32.558 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-15 22:15:32.560 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-15 22:15:32.562 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-15 22:15:32.564 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-15 22:15:32.566 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-15 22:15:32.568 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-15 22:15:32.570 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ProductCreatedNewsletterHandler to ProductCreatedEvent
+2026-03-15 22:15:32.573 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PromotionCreatedNewsletterHandler to PromotionCreatedEvent
+2026-03-15 22:15:32.575 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-15 22:15:32.576 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-15 22:15:32.776 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-15 22:15:32.825 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-15 22:15:32.829 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-15 22:15:32.831 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-15 22:15:41.326 +02:00 [WRN] [Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware] Failed to determine the https port for redirect.
+2026-03-15 22:15:41.382 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar responded 302 in 54.5274 ms
+2026-03-15 22:15:41.474 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 68.9627 ms
+2026-03-15 22:15:41.494 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 8.3312 ms
+2026-03-15 22:15:41.494 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 8.3686 ms
+2026-03-15 22:15:42.333 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 499.0683 ms
+2026-03-15 22:15:42.770 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 440.2315 ms
+2026-03-15 22:15:43.235 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar responded 302 in 0.3091 ms
+2026-03-15 22:15:43.246 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 0.3835 ms
+2026-03-15 22:15:43.260 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 0.1996 ms
+2026-03-15 22:15:43.260 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 0.1999 ms
+2026-03-15 22:15:43.867 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 338.2889 ms
+2026-03-15 22:15:44.113 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 244.3943 ms

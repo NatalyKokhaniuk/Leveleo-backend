@@ -64,7 +64,13 @@ builder.ConfigureSerilog();
 // DATABASE
 // =====================================================
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(); // retry при тимчасових помилках
+            npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); // для Include
+        }));
 
 // =====================================================
 // IDENTITY
