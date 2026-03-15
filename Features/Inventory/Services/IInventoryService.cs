@@ -16,6 +16,5 @@ public interface IInventoryService
 
     Task ConfirmReservationAsync(Guid productId, Guid orderId);
 
-    // Реализация по умолчанию, чтобы не требовать добавления абстрактного метода у всех реализаций.
     Task<Dictionary<Guid, int>> GetAvailableQuantitiesAsync(IEnumerable<Guid> productIds);
 }
