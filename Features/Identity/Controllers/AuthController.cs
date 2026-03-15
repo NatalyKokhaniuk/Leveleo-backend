@@ -88,8 +88,6 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
 
         // Логіка логауту на бекенді (видалення з БД або Blacklist)
         await authService.LogoutAsync(refreshToken);
-
-        // Видаляємо cookie на клієнті
         if (Request.Cookies.ContainsKey("refreshToken"))
         {
             Response.Cookies.Delete("refreshToken", new CookieOptions
@@ -157,7 +155,7 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
     [Authorize]
     public async Task<IActionResult> DisableTwoFactor()
     {
-        // Витягуємо userId з токена
+        //  userId з токена
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
             throw new ApiException("UNAUTHORIZED", "Unauthorized", 401);
@@ -265,7 +263,6 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
 
         await authService.DeleteAccountAsync(userId);
 
-        // Видаляємо cookie refreshToken на клієнті
         if (Request.Cookies.ContainsKey("refreshToken"))
         {
             Response.Cookies.Delete("refreshToken", new CookieOptions
