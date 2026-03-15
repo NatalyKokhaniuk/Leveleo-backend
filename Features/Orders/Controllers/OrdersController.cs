@@ -109,12 +109,12 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        // Отримуємо базовий URL сервера для callback
+        // базовий URL сервера для callback
         var serverUrl = $"{Request.Scheme}://{Request.Host}";
 
         var result = await orderService.CreateOrderFromCartAsync(userId, orderCreateDto, serverUrl);
 
-        // Якщо кошик змінився, повертаємо 409 Conflict з оновленим кошиком
+        // Якщо кошик змінився, 409 Conflict з оновленим кошиком
         if (result.ShoppingCart != null)
         {
             return Conflict(result);
