@@ -102,7 +102,6 @@ public class AttributeGroupService(AppDbContext db, ISlugGenerator slugGenerator
         if (dto.Description.HasValue)
             entity.Description = dto.Description.Value;
 
-        // Якщо хочемо підтримку оновлення перекладів через DTO
         if (dto.Translations.HasValue && dto.Translations.Value != null)
         {
             foreach (var tDto in dto.Translations.Value)
@@ -110,13 +109,12 @@ public class AttributeGroupService(AppDbContext db, ISlugGenerator slugGenerator
                 var translation = entity.Translations.FirstOrDefault(t => t.LanguageCode == tDto.LanguageCode);
                 if (translation != null)
                 {
-                    // Оновлюємо існуючий переклад
                     translation.Name = tDto.Name;
                     translation.Description = tDto.Description;
                 }
                 else
                 {
-                    // Додаємо новий переклад
+                    //новий переклад
                     entity.Translations.Add(new AttributeGroupTranslation
                     {
                         LanguageCode = tDto.LanguageCode,
