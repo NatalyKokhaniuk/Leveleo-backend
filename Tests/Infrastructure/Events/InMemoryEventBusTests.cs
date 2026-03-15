@@ -24,13 +24,11 @@ public class InMemoryEventBusTests
     [Fact]
     public void Subscribe_ShouldRegisterHandler()
     {
-        // Arrange
+
         var eventBus = new InMemoryEventBus(_serviceProvider, _loggerMock.Object);
 
-        // Act
         eventBus.Subscribe<TestEvent, TestEventHandler>();
 
-        // Assert
         // Якщо не викинуло винятку - успішно підписано
         Assert.True(true);
     }
@@ -38,7 +36,6 @@ public class InMemoryEventBusTests
     [Fact]
     public async Task PublishAsync_ShouldCallHandler()
     {
-        // Arrange
         var eventBus = new InMemoryEventBus(_serviceProvider, _loggerMock.Object);
         eventBus.Subscribe<TestEvent, TestEventHandler>();
 
@@ -47,28 +44,27 @@ public class InMemoryEventBusTests
             Message = "Test message"
         };
 
-        // Act
+
         await eventBus.PublishAsync(testEvent);
 
-        // Assert
-        // Handler було викликано (перевіримо через статичний лічильник)
+
         Assert.Equal(1, TestEventHandler.CallCount);
     }
 
     [Fact]
     public async Task PublishAsync_WithoutHandlers_ShouldNotThrow()
     {
-        // Arrange
+
         var eventBus = new InMemoryEventBus(_serviceProvider, _loggerMock.Object);
         var testEvent = new TestEvent { Message = "Test" };
 
-        // Act & Assert
+
         await eventBus.PublishAsync(testEvent);
-        // Не повинно викинути виняток
+
     }
 }
 
-// Test event and handler
+
 public class TestEvent : IEvent
 {
     public string Message { get; set; } = string.Empty;
