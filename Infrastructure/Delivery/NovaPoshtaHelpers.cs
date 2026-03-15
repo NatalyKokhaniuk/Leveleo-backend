@@ -23,16 +23,14 @@ public static class NovaPoshtaHelpers
     /// </summary>
     public static string FormatPhone(string phone)
     {
-        // Прибираємо всі символи крім цифр
+
         var digitsOnly = new string(phone.Where(char.IsDigit).ToArray());
 
-        // Якщо починається з 380, додаємо +
         if (digitsOnly.StartsWith("380") && digitsOnly.Length == 12)
         {
             return "+" + digitsOnly;
         }
 
-        // Якщо починається з 0, замінюємо на +380
         if (digitsOnly.StartsWith("0") && digitsOnly.Length == 10)
         {
             return "+380" + digitsOnly.Substring(1);
