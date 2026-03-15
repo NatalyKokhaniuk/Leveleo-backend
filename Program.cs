@@ -276,6 +276,12 @@ app.UseAuthorization();
 // =====================================================
 // API DOCUMENTATION
 // =====================================================
+app.Use((context, next) =>
+{
+    // Примусово ставимо HTTPS-схему для скаляра та інших URL
+    context.Request.Scheme = "https";
+    return next();
+});
 app.MapScalarApiReference(options =>
 {
     options.Title = "LeveLEO API Документація";
