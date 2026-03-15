@@ -174,7 +174,6 @@ public class StatisticsService(AppDbContext db) : IStatisticsService
 
         foreach (var promo in promotions)
         {
-            // Підраховуємо замовлення з цією промоакцією
             var ordersWithPromo = await db.Orders
                 .Where(o => o.Status == OrderStatus.Completed && o.TotalCartDiscount > 0)
                 .ToListAsync();
