@@ -17,7 +17,7 @@ public class JwtService(JwtSettings jwtSettings) : IJwtService
     {
         var claims = new List<Claim>
 {
-    new Claim(ClaimTypes.NameIdentifier, user.Id), // 🔴 КЛЮЧОВО
+    new Claim(ClaimTypes.NameIdentifier, user.Id), // 🔴
     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
     new Claim(JwtRegisteredClaimNames.Email, user.Email!),
     new Claim("firstName", user.FirstName ?? ""),
@@ -122,20 +122,19 @@ public class JwtService(JwtSettings jwtSettings) : IJwtService
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret); // твій секрет
+            var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
             var principal = tokenHandler.ValidateToken(refreshToken, new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidIssuer = _jwtSettings.Issuer,
                 ValidateAudience = true,
                 ValidAudience = _jwtSettings.Audience,
-                ValidateLifetime = true, // перевіряємо, що токен не прострочений
+                ValidateLifetime = true, 
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateIssuerSigningKey = true,
                 ClockSkew = TimeSpan.Zero
             }, out var validatedToken);
 
-            // якщо валідно, повертаємо userId з claim
             var userId = principal.FindFirst("userId")?.Value;
             if (string.IsNullOrEmpty(userId))
                 throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid", 401);
@@ -157,7 +156,7 @@ public class JwtService(JwtSettings jwtSettings) : IJwtService
         var claims = new List<Claim>
 {
     new Claim(ClaimTypes.NameIdentifier, user.Id),
-    new Claim("temp", "true") // маркер короткоживучого токена
+    new Claim("temp", "true")
 };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
