@@ -441,7 +441,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
     : 0m,
 
                 TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
-                RatingCount = p.OrderItems // 👈 ДОДАНО
+                RatingCount = p.OrderItems 
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
             })
             .ToListAsync();
@@ -548,7 +548,6 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
         {
             var promoId = filter.PromotionId.Value;
 
-            // Отримуємо конкретну акцію разом із перекладами
             var promotion = await _db.Promotions
                 .Include(p => p.Translations)
                 .FirstOrDefaultAsync(p => p.Id == promoId);
@@ -559,6 +558,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 var productIds = new List<Guid>();
 
                 // Якщо задані конкретні продукти
+                
                 if (promotion.ProductConditions?.ProductIds.HasValue == true &&
                     promotion.ProductConditions.ProductIds.Value != null)
                 {
@@ -585,10 +585,8 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                     productIds.AddRange(categoryProductIds);
                 }
 
-                // Виключаємо дублі
                 productIds = [.. productIds.Distinct()];
 
-                // Фільтруємо запит
                 query = query.Where(p => productIds.Contains(p.Id));
             }
         }
@@ -691,7 +689,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
     {
         public decimal AverageRating { get; set; }
         public int TotalSold { get; set; }
-        public int RatingCount { get; set; } // 👈 ДОДАНО
+        public int RatingCount { get; set; }
     }
 
     public async Task<ProductResponseDto> BuildFullDtoAsync(Guid productId)
