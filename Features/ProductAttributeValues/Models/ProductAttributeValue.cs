@@ -15,7 +15,7 @@ public class ProductAttributeValue : ITimestamped, ITranslatable<ProductAttribut
     public Guid ProductAttributeId { get; set; }
     public ProductAttribute ProductAttribute { get; set; } = null!;
 
-    // Саме значення. Для simplicity - зберігаємо все як string, int, decimal, bool
+    // Саме значення. Для simplicity -  все як string, int, decimal, bool
     public string? StringValue { get; set; }
 
     public decimal? DecimalValue { get; set; }
