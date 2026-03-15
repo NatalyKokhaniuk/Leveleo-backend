@@ -6,24 +6,20 @@ public class OpenApiBearerMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        // Перехоплюємо тільки OpenAPI JSON
         if (context.Request.Path.StartsWithSegments("/openapi/v1.json"))
         {
-            // Читаємо оригінальний JSON
             var originalBody = context.Response.Body;
 
             using var memStream = new MemoryStream();
             context.Response.Body = memStream;
 
-            await next(context); // викликаємо наступний middleware, щоб згенерувати JSON
+            await next(context);
 
             memStream.Position = 0;
             var json = await new StreamReader(memStream).ReadToEndAsync();
 
-            // Парсимо в JsonNode
             var doc = JsonNode.Parse(json)!.AsObject();
 
-            // Додаємо securityScheme
             var components = doc["components"] ?? new JsonObject();
             var schemas = components["securitySchemes"] ?? new JsonObject();
             components["securitySchemes"] = schemas;
@@ -39,7 +35,6 @@ public class OpenApiBearerMiddleware(RequestDelegate next)
 
             doc["components"] = components;
 
-            // Додаємо глобальний security requirement
             doc["security"] = new JsonArray
                 {
                     new JsonObject
@@ -48,7 +43,6 @@ public class OpenApiBearerMiddleware(RequestDelegate next)
                     }
                 };
 
-            // Відправляємо назад модифікований JSON
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(doc.ToJsonString());
 
@@ -59,7 +53,7 @@ public class OpenApiBearerMiddleware(RequestDelegate next)
     }
 }
 
-// Extension метод для простого додавання middleware
+// Extension метод додавання middleware
 public static class OpenApiBearerMiddlewareExtensions
 {
     public static IApplicationBuilder UseOpenApiBearerMiddleware(this IApplicationBuilder builder)
