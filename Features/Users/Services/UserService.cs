@@ -93,7 +93,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IMediaService
         string? avatarUrl = null;
         if (!string.IsNullOrEmpty(user.AvatarKey))
         {
-            // Генеруємо тимчасовий URL, наприклад, на 30 хв
+            // тимчасовий URL
             avatarUrl = await mediaService.GetFileUrlAsync(user.AvatarKey, TimeSpan.FromMinutes(30));
         }
         return new UserResponseDto
