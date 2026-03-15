@@ -51,7 +51,6 @@ public class InMemoryEventBus(IServiceProvider serviceProvider, ILogger<InMemory
 
         logger.LogInformation("Publishing event {EventType} to {HandlerCount} handlers", eventType.Name, handlerTypes.Count);
 
-        // Виконуємо обробники паралельно
         var tasks = handlerTypes.Select(async handlerType =>
         {
             try
