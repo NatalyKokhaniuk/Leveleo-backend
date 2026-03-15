@@ -26,7 +26,6 @@ public class ProductMediaService(AppDbContext db, IMediaService mediaService) : 
         }
         else
         {
-            // якщо передано число (0 або більше) — вставляємо на позицію sortOrder
             var toShift = await db.ProductImages
                 .Where(i => i.ProductId == productId && i.SortOrder >= sortOrder.Value)
                 .ToListAsync();
@@ -63,7 +62,6 @@ public class ProductMediaService(AppDbContext db, IMediaService mediaService) : 
         }
         else
         {
-            // якщо передано число (0 або більше) — вставляємо на позицію sortOrder
             var toShift = await db.ProductVideos
                 .Where(i => i.ProductId == productId && i.SortOrder >= sortOrder.Value)
                 .ToListAsync();
