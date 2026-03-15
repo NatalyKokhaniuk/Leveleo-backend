@@ -14,7 +14,7 @@ public class PaymentController(IPaymentService paymentService) : ControllerBase
     /// Доступний лише авторизованому користувачу
     /// </summary>
     [HttpGet("{paymentId:guid}")]
-    [Authorize] // тут можна додати роль, якщо треба, але зазвичай користувачі дивляться свої власні платежі
+    [Authorize] 
     public async Task<ActionResult<PaymentResponseDto>> GetPaymentById(Guid paymentId)
     {
         var payment = await paymentService.GetPaymentByIdAsync(paymentId);
@@ -28,7 +28,7 @@ public class PaymentController(IPaymentService paymentService) : ControllerBase
     /// LiqPay надсилає payload + signature
     /// </summary>
     [HttpPost("callback")]
-    [AllowAnonymous] // колбеки приходять від LiqPay, авторизації немає
+    [AllowAnonymous] // колбеки від LiqPay, авторизації немає
     public async Task<IActionResult> LiqPayCallback([FromForm] string data, [FromForm] string signature)
     {
         var callback = paymentService.VerifyCallback(data, signature);
