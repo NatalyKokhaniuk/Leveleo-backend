@@ -19,7 +19,7 @@ public class SocialAuthService(
 
     public async Task<ApplicationUser> LoginWithGoogleAsync(string idToken)
     {
-        var email = await ValidateGoogleTokenAsync(idToken); // отримуємо email з Google
+        var email = await ValidateGoogleTokenAsync(idToken); // email з Google
         var user = await userManager.FindByEmailAsync(email);
         if (user == null)
         {
@@ -48,11 +48,11 @@ public class SocialAuthService(
 
     public string GetFrontendRedirectUrl(string tempToken)
     {
-        // Формуємо повну URL для редіректу на фронтенд
+        // URL для редіректу на фронтенд
         var frontendUrl = config["Frontend:Url"]
                           ?? throw new ApiException("MISSING_FRONTEND_URL", "Frontend URL not configured", 500);
 
-        // Додаємо токен як query параметр
+        // токен як query параметр
         return $"{frontendUrl}/social-login#token={tempToken}";
     }
 
