@@ -26,21 +26,21 @@ public static class DatabaseSeeder
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var mediaService = services.GetRequiredService<IMediaService>();
 
-        // Видаляємо і створюємо БД заново (тільки в Development)
         await context.Database.EnsureDeletedAsync();
         await context.Database.EnsureCreatedAsync();
-        // Повне очищення бакету (S3/MinIO)
+
         Console.WriteLine("Очищення медіа-бакету...");
         try
         {
-            await mediaService.ClearBucketAsync();  // метод, який я дав раніше
+            await mediaService.ClearBucketAsync();  
+            
             Console.WriteLine("Бакет повністю очищено.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Помилка очищення бакету: {ex.Message}");
         }
-        // Створюємо ролі
+
         string[] roles = ["Admin", "Moderator", "User"];
         foreach (var role in roles)
         {
@@ -52,7 +52,7 @@ public static class DatabaseSeeder
 
         // Дефолтний адмін
         var adminEmail = "admin@leveleo.com";
-        var adminPassword = "Admin123!@#";  // Зміни на свій
+        var adminPassword = "Admin123!@#";  
 
         var adminUser = await userManager.FindByEmailAsync(adminEmail);
         if (adminUser == null)
@@ -140,7 +140,7 @@ public static class DatabaseSeeder
             context.Categories.AddRange(poly, mono);
             await context.SaveChangesAsync();
 
-            // CategoryClosure (твій код залишається без змін)
+
             var cats = await context.Categories.ToListAsync();
             context.CategoryClosures.RemoveRange(context.CategoryClosures);
             await context.SaveChangesAsync();
@@ -182,7 +182,7 @@ public static class DatabaseSeeder
             {
                 new ProductAttribute { Name = "Polyphony", Slug = "polyphony", AttributeGroupId = group.Id, Type = AttributeType.String, IsFilterable = true, IsComparable = true },
                 new ProductAttribute { Name = "Impedance", Slug = "impedance", AttributeGroupId = group.Id, Type = AttributeType.String, Unit = "Ω", IsFilterable = true },
-                new ProductAttribute { Name = "Woofer Size", Slug = "woofer-size", AttributeGroupId = group.Id, Type = AttributeType.String, Unit = "\"", IsFilterable = true } // <--- додай це
+                new ProductAttribute { Name = "Woofer Size", Slug = "woofer-size", AttributeGroupId = group.Id, Type = AttributeType.String, Unit = "\"", IsFilterable = true } 
             };
             context.ProductAttributes.AddRange(attrs);
             await context.SaveChangesAsync();
@@ -271,7 +271,7 @@ public static class DatabaseSeeder
     // Допоміжні функції для українських перекладів
     private static string GetUkrainianBrandName(string enName)
     {
-        return enName; // назви брендів зазвичай не перекладають
+        return enName; 
     }
 
     private static string GetUkrainianBrandDescription(string enName)
