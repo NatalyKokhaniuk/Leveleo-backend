@@ -29,11 +29,10 @@ public class OrderItemReviewService(
             );
         }
 
-        // Перевіряємо, що OrderItem існує і належить користувачу
         var orderItem = await db.OrderItems
             .Include(oi => oi.Order)
             .Include(oi => oi.Product)
-            .Include(oi => oi.Review) // щоб перевірити, чи вже є відгук
+            .Include(oi => oi.Review)
             .FirstOrDefaultAsync(oi => oi.Id == dto.OrderItemId)
             ?? throw new ApiException(
                 "ORDER_ITEM_NOT_FOUND",
@@ -41,7 +40,6 @@ public class OrderItemReviewService(
                 404
             );
 
-        // Перевіряємо, що замовлення належить користувачу
         if (orderItem.Order.UserId != userId)
         {
             throw new ApiException(
@@ -51,7 +49,6 @@ public class OrderItemReviewService(
             );
         }
 
-        // Перевіряємо, що замовлення завершено
         if (orderItem.Order.Status != OrderStatus.Completed)
         {
             throw new ApiException(
@@ -61,7 +58,6 @@ public class OrderItemReviewService(
             );
         }
 
-        // Перевіряємо, що відгук ще не створено
         if (orderItem.Review != null)
         {
             throw new ApiException(
@@ -71,18 +67,16 @@ public class OrderItemReviewService(
             );
         }
 
-        // Створюємо відгук
         var review = new OrderItemReview
         {
             OrderItemId = dto.OrderItemId,
             Rating = dto.Rating,
             Comment = dto.Comment,
-            IsApproved = false, // за замовчуванням потребує схвалення
+            IsApproved = false, 
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        // Додаємо фото
         if (dto.PhotoKeys != null && dto.PhotoKeys.Count > 0)
         {
             foreach (var photoKey in dto.PhotoKeys)
@@ -96,7 +90,6 @@ public class OrderItemReviewService(
             }
         }
 
-        // Додаємо відео
         if (dto.VideoKeys != null && dto.VideoKeys.Count > 0)
         {
             foreach (var videoKey in dto.VideoKeys)
@@ -113,7 +106,6 @@ public class OrderItemReviewService(
         db.OrderItemReviews.Add(review);
         await db.SaveChangesAsync();
 
-        // Перезавантажуємо з навігаційними властивостями
         await db.Entry(review)
             .Reference(r => r.OrderItem)
             .Query()
@@ -122,7 +114,6 @@ public class OrderItemReviewService(
                 .ThenInclude(o => o.User)
             .LoadAsync();
 
-        // Публікуємо подію про створення відгуку
         await eventBus.PublishAsync(new ReviewCreatedEvent
         {
             ReviewId = review.Id,
@@ -153,7 +144,6 @@ public class OrderItemReviewService(
                 404
             );
 
-        // Перевіряємо власника
         if (review.OrderItem.Order.UserId != userId)
         {
             throw new ApiException(
@@ -163,7 +153,6 @@ public class OrderItemReviewService(
             );
         }
 
-        // Не можна редагувати схвалений відгук
         if (review.IsApproved)
         {
             throw new ApiException(
@@ -173,7 +162,6 @@ public class OrderItemReviewService(
             );
         }
 
-        // Оновлюємо поля
         if (dto.Rating.HasValue)
         {
             if (dto.Rating.Value < 1 || dto.Rating.Value > 5)
@@ -188,10 +176,9 @@ public class OrderItemReviewService(
             review.Comment = dto.Comment.Value;
         }
 
-        // Оновлюємо фото
         if (dto.PhotoKeys.HasValue)
         {
-            // Видаляємо старі фото з S3
+
             foreach (var photo in review.Photos)
             {
                 await mediaService.DeleteFileAsync(photo.PhotoKey);
@@ -200,7 +187,6 @@ public class OrderItemReviewService(
             db.OrderItemReviewPhotos.RemoveRange(review.Photos);
             review.Photos.Clear();
 
-            // Додаємо нові
             if (dto.PhotoKeys.Value != null)
             {
                 foreach (var photoKey in dto.PhotoKeys.Value)
@@ -215,10 +201,8 @@ public class OrderItemReviewService(
             }
         }
 
-        // Оновлюємо відео
         if (dto.VideoKeys.HasValue)
         {
-            // Видаляємо старі відео з S3
             foreach (var video in review.Videos)
             {
                 await mediaService.DeleteFileAsync(video.VideoKey);
@@ -227,7 +211,6 @@ public class OrderItemReviewService(
             db.OrderItemReviewVideos.RemoveRange(review.Videos);
             review.Videos.Clear();
 
-            // Додаємо нові
             if (dto.VideoKeys.Value != null)
             {
                 foreach (var videoKey in dto.VideoKeys.Value)
@@ -267,7 +250,6 @@ public class OrderItemReviewService(
             throw new ApiException("FORBIDDEN", "You can only delete your own reviews.", 403);
         }
 
-        // Видаляємо медіа з S3
         foreach (var photo in review.Photos)
         {
             await mediaService.DeleteFileAsync(photo.PhotoKey);
@@ -407,7 +389,6 @@ public class OrderItemReviewService(
 
         await db.SaveChangesAsync();
 
-        // Публікуємо подію про схвалення відгуку
         await eventBus.PublishAsync(new ReviewApprovedEvent
         {
             ReviewId = review.Id,
@@ -442,7 +423,6 @@ public class OrderItemReviewService(
 
         await db.SaveChangesAsync();
 
-        // Публікуємо подію про відхилення відгуку
         await eventBus.PublishAsync(new ReviewRejectedEvent
         {
             ReviewId = review.Id,
