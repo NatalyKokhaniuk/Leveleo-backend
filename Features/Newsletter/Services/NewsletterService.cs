@@ -267,7 +267,7 @@ public class NewsletterService : INewsletterService
         var promotionLink = "https://leveleo.com/promotions";
         var unsubscribeLink = $"https://leveleo.com/newsletter/unsubscribe?token={subscriber.UnsubscribeToken}";
 
-        // Форматуємо знижку в залежності від типу
+        // Форматувати знижку в залежності від типу
         var discountDisplay = promotion.DiscountType == "Percentage" 
             ? $"{promotion.DiscountValue}%" 
             : $"{promotion.DiscountValue:C}";
@@ -276,7 +276,7 @@ public class NewsletterService : INewsletterService
             ? "Знижка до:" 
             : "Знижка:";
 
-        // Додаємо інформацію про купон якщо є
+        // Додати інформацію про купон якщо є
         var couponInfo = !string.IsNullOrEmpty(promotion.CouponCode)
             ? $"<p style='font-size: 16px; color: #666; background: #fff7ed; padding: 15px; border-radius: 8px; margin-top: 15px;'>💳 <strong>Промокод:</strong> <span style='font-family: monospace; font-size: 18px; color: #ef4444;'>{promotion.CouponCode}</span></p>"
             : "";
