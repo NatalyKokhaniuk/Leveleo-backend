@@ -78,7 +78,7 @@ public class InventoryService(AppDbContext db) : IInventoryService
                 404
             );
 
-        // Списуємо зі складу
+        // Списати зі складу
         product.StockQuantity -= reservation.Quantity;
 
         if (product.StockQuantity < 0)
@@ -90,7 +90,7 @@ public class InventoryService(AppDbContext db) : IInventoryService
             );
         }
 
-        // Видаляємо резервування
+        // Видалити резервування
         db.InventoryReservations.Remove(reservation);
 
         await db.SaveChangesAsync();
@@ -104,7 +104,6 @@ public class InventoryService(AppDbContext db) : IInventoryService
 
         foreach (var productId in productIds)
         {
-            // Используем существующий метод для каждого продукта.
             var qty = await GetAvailableQuantityAsync(productId).ConfigureAwait(false);
             result[productId] = qty;
         }
