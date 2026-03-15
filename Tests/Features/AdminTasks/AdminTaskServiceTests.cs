@@ -25,7 +25,6 @@ public class AdminTaskServiceTests : IDisposable
     [Fact]
     public async Task CreateTaskAsync_ShouldCreateTask()
     {
-        // Arrange
         var task = new AdminTask
         {
             Title = "Test Task",
@@ -34,10 +33,8 @@ public class AdminTaskServiceTests : IDisposable
             Priority = AdminTaskPriority.Normal
         };
 
-        // Act
         var result = await _service.CreateTaskAsync(task);
 
-        // Assert
         Assert.NotEqual(Guid.Empty, result.Id);
         Assert.Equal("Test Task", result.Title);
         Assert.Equal(AdminTaskStatus.Pending, result.Status);
@@ -46,7 +43,6 @@ public class AdminTaskServiceTests : IDisposable
     [Fact]
     public async Task GetTasksAsync_WithStatusFilter_ShouldReturnFiltered()
     {
-        // Arrange
         await _service.CreateTaskAsync(new AdminTask
         {
             Title = "Pending Task",
@@ -72,10 +68,8 @@ public class AdminTaskServiceTests : IDisposable
             PageSize = 10
         };
 
-        // Act
         var result = await _service.GetTasksAsync(filter);
 
-        // Assert
         Assert.Equal(1, result.TotalCount);
         Assert.All(result.Items, task => Assert.Equal(AdminTaskStatus.Pending, task.Status));
     }
@@ -83,7 +77,6 @@ public class AdminTaskServiceTests : IDisposable
     [Fact]
     public async Task AssignTaskAsync_ShouldAssignToUser()
     {
-        // Arrange
         var task = await _service.CreateTaskAsync(new AdminTask
         {
             Title = "Unassigned Task",
@@ -94,10 +87,8 @@ public class AdminTaskServiceTests : IDisposable
 
         var userId = "user-123";
 
-        // Act
         var result = await _service.AssignTaskAsync(task.Id, userId);
 
-        // Assert
         Assert.Equal(userId, result.AssignedTo);
         Assert.Equal(AdminTaskStatus.InProgress, result.Status);
     }
@@ -105,7 +96,6 @@ public class AdminTaskServiceTests : IDisposable
     [Fact]
     public async Task CompleteTaskAsync_ShouldMarkAsCompleted()
     {
-        // Arrange
         var task = await _service.CreateTaskAsync(new AdminTask
         {
             Title = "Task to Complete",
@@ -120,10 +110,8 @@ public class AdminTaskServiceTests : IDisposable
             CompletionNote = "All done!"
         };
 
-        // Act
         var result = await _service.CompleteTaskAsync(task.Id, userId, completeDto);
 
-        // Assert
         Assert.Equal(AdminTaskStatus.Completed, result.Status);
         Assert.Equal("All done!", result.CompletionNote);
         Assert.NotNull(result.CompletedAt);
@@ -132,7 +120,6 @@ public class AdminTaskServiceTests : IDisposable
     [Fact]
     public async Task CompleteTaskAsync_AlreadyCompleted_ShouldThrowException()
     {
-        // Arrange
         var task = await _service.CreateTaskAsync(new AdminTask
         {
             Title = "Task",
@@ -144,7 +131,6 @@ public class AdminTaskServiceTests : IDisposable
 
         var completeDto = new CompleteTaskDto();
 
-        // Act & Assert
         await Assert.ThrowsAsync<ApiException>(async () =>
             await _service.CompleteTaskAsync(task.Id, "user", completeDto)
         );
