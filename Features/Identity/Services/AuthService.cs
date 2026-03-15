@@ -114,7 +114,7 @@ public class AuthService(
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(30), // скільки тримаєш токен
+            ExpiresAt = DateTime.UtcNow.AddDays(30), 
             CreatedAt = DateTime.UtcNow,
             User = user
         };
@@ -167,7 +167,7 @@ public class AuthService(
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(30), // скільки тримаєш токен
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
             User = user
         };
@@ -260,8 +260,6 @@ public class AuthService(
 
             if (!VerifyTotp(appUser.TotpSecret, request.Code))
                 throw new ApiException("INVALID_TOTP_CODE", "Invalid TOTP code", 400);
-
-            // Генеруємо backup-коди лише якщо їх ще нема
             var codes = Enumerable.Range(0, 10)
         .Select(_ => RandomNumberGenerator.GetInt32(10000000, 99999999).ToString())
         .ToList();
@@ -289,7 +287,6 @@ public class AuthService(
         string? avatarUrl = null;
         if (!string.IsNullOrEmpty(user.AvatarKey))
         {
-            // Генеруємо тимчасовий URL, наприклад, на 30 хв
             avatarUrl = await mediaService.GetFileUrlAsync(user.AvatarKey, TimeSpan.FromMinutes(30));
         }
         return new UserResponseDto
@@ -371,12 +368,10 @@ public class AuthService(
         var existingCodes = user.BackupCodes?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList() ?? [];
         if (existingCodes.Count >= 10)
             return existingCodes;
-        // Генеруємо 10 випадкових кодів по 8 цифр
         var newCodes = Enumerable.Range(0, 10 - existingCodes.Count)
         .Select(_ => RandomNumberGenerator.GetInt32(10000000, 99999999).ToString())
         .ToList();
         existingCodes.AddRange(newCodes);
-        // Тут можна зберегти коди у користувача, наприклад в JSON полі
         user.BackupCodes = string.Join(",", existingCodes);
         await userManager.UpdateAsync(user);
 
@@ -385,7 +380,6 @@ public class AuthService(
 
     public async Task<(AuthResponseDto authResponse, string RefreshToken)> LoginWithBackupCodeAsync(LoginWithBackupCodeRequestDto request)
     {
-        // Знаходимо користувача
         var user = await userManager.FindByEmailAsync(request.Email)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
@@ -400,25 +394,22 @@ public class AuthService(
         if (string.IsNullOrEmpty(user.BackupCodes))
             throw new ApiException("NO_BACKUP_CODES", "No backup codes available", 400);
 
-        // Розділяємо рядок з backup-кодами
         var codes = user.BackupCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
 
         if (!codes.Contains(request.BackupCode))
             throw new ApiException("INVALID_BACKUP_CODE", "Invalid backup code", 400);
 
-        // Видаляємо використаний код
         codes.Remove(request.BackupCode);
         user.BackupCodes = string.Join(',', codes);
         await userManager.UpdateAsync(user);
 
-        // Генеруємо токени як при звичайному логіні
         var accessToken = jwtService.GenerateAccessToken(user);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUser = await BuildAuthUserDto(user);
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(30), // скільки тримаєш токен
+            ExpiresAt = DateTime.UtcNow.AddDays(30), 
             CreatedAt = DateTime.UtcNow,
             User = user
         };
@@ -472,7 +463,7 @@ public class AuthService(
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
-        // генеруємо reset-token під капотом
+
         var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
 
         var result = await userManager.ResetPasswordAsync(
@@ -528,7 +519,7 @@ public class AuthService(
         await userManager.UpdateSecurityStampAsync(user);
         await userManager.UpdateAsync(user);
 
-        // Тут можна викликати подію або хук, щоб інші сутності знали про видалення
+        //  можна викликати подію або хук, щоб інші сутності знали про видалення
         // await _userDeletionPublisher.PublishAsync(user.Id);
     }
 
@@ -539,7 +530,7 @@ public class AuthService(
         if (!user.IsActive)
             throw new ApiException("USER_INACTIVE", "User is inactive", 403);
 
-        // Тут можна перевірити EmailConfirmed, якщо потрібно
+        // можна перевірити EmailConfirmed, якщо потрібно
         if (!await userManager.IsEmailConfirmedAsync(user))
             throw new ApiException("EMAIL_NOT_CONFIRMED", "Email is not confirmed", 403);
 
@@ -548,7 +539,6 @@ public class AuthService(
 
         var authUserDto = await BuildAuthUserDto(user);
 
-        // Зберігаємо refresh token
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
