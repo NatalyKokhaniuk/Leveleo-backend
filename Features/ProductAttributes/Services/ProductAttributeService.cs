@@ -83,13 +83,11 @@ public class ProductAttributeService(AppDbContext db, ISlugGenerator slugGenerat
                 var translation = attr.Translations.FirstOrDefault(t => t.LanguageCode == tDto.LanguageCode);
                 if (translation != null)
                 {
-                    // Оновлюємо існуючий переклад
                     translation.Name = tDto.Name;
                     translation.Description = tDto.Description;
                 }
                 else
                 {
-                    // Додаємо новий переклад
                     attr.Translations.Add(new ProductAttributeTranslation
                     {
                         LanguageCode = tDto.LanguageCode,
