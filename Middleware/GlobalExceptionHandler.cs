@@ -46,9 +46,8 @@ public class GlobalExceptionHandler(RequestDelegate next)
         var response = new
         {
             errorCode = "INTERNAL_ERROR",
-            //message = "An unexpected error occurred."
-            message = exception.Message,   // показуємо реальну помилку
-            stackTrace = exception.StackTrace // для локальної дебаг-сесії
+            message = exception.Message,   
+            stackTrace = exception.StackTrace 
         };
 
         var json = JsonSerializer.Serialize(response);
