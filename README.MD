@@ -12,3 +12,6 @@
    docker compose up
    ```
 2. Відкрийте браузер і перейдіть за адресою http://localhost:8080/scalar, щоб побачити всі ендпойнти проєкту. 
+## Admin Panel
+- Email: admin@leveleo.com
+- Password: Admin123!@#

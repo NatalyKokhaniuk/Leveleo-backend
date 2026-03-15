@@ -13,6 +13,7 @@ using LeveLEO.Features.Notifications.EventHandlers;
 using LeveLEO.Features.Orders.Services;
 using LeveLEO.Features.Payments.Services;
 using LeveLEO.Features.ProductAttributes.Services;
+using LeveLEO.Features.ProductAttributeValues.Services;
 using LeveLEO.Features.Products.Services;
 using LeveLEO.Features.Promotions.Services;
 using LeveLEO.Features.Shipping.Services;
@@ -175,6 +176,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemReviewService, OrderItemReviewService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
+builder.Services.AddScoped<IProductAttributeValueService, ProductAttributeValueService>();
 
 // ProductService з декоратором для кешування
 builder.Services.AddScoped<ProductService>();
@@ -255,7 +257,7 @@ var app = builder.Build();
 // =====================================================
 if (app.Environment.IsDevelopment())
 {
-    await DatabaseSeeder.SeedAsync(app);
+    // await DatabaseSeeder.SeedAsync(app);
 }
 
 // =====================================================
@@ -266,10 +268,7 @@ app.UseMiddleware<GlobalExceptionHandler>();
 // Serilog HTTP Request Logging
 app.UseSerilogRequestLogging();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();

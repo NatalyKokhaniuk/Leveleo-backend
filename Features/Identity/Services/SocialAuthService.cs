@@ -13,10 +13,8 @@ public class SocialAuthService(
     UserManager<ApplicationUser> userManager,
     IJwtService jwtService,
     IConfiguration config,
-    IHttpClientFactory httpClientFactory) : ISocialAuthService
+    HttpClient httpClient) : ISocialAuthService
 {
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
-
     public async Task<ApplicationUser> LoginWithGoogleAsync(string idToken)
     {
         var email = await ValidateGoogleTokenAsync(idToken); // email з Google
@@ -77,7 +75,7 @@ public class SocialAuthService(
     {
         try
         {
-            var fbResponse = await _httpClient.GetAsync(
+            var fbResponse = await httpClient.GetAsync(
                 $"https://graph.facebook.com/me?fields=email&access_token={accessToken}");
 
             fbResponse.EnsureSuccessStatusCode();
