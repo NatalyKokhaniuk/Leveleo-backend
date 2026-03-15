@@ -219,7 +219,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
 
         var now = DateTimeOffset.UtcNow;
 
-        // Беремо тільки потенційно релевантні промо
         var promotions = await _db.Promotions
             .Where(p =>
                 p.Level == PromotionLevel.Product &&
@@ -276,7 +275,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
             TotalProductsPrice = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity)
         };
 
-        // Беремо всі діючі промо рівня Cart
         var cartPromotions = await _db.Promotions
             .Where(p =>
                 p.Level == PromotionLevel.Cart &&
@@ -290,7 +288,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
         Promotion? couponPromotion = null;
         ApplyCouponResult couponResult = ApplyCouponResult.None;
 
-        // Перевірка коду купона, якщо він введений
         if (!string.IsNullOrWhiteSpace(couponCode))
         {
             couponPromotion = cartPromotions.FirstOrDefault(p => p.IsCoupon && p.CouponCode == couponCode);
@@ -324,7 +321,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
             }
         }
 
-        // Фільтруємо промо за CartLevelCondition (безопасно проверяем Optional<T>.Value на null)
         var eligiblePromotions = cartPromotions
             .Where(p =>
             {
@@ -372,7 +368,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
             })
             .ToList();
 
-        // Обираємо найвигіднішу промо
         var bestPromotionResult = eligiblePromotions
             .Select(p =>
             {
@@ -394,7 +389,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
             var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity);
             decimal totalCartDiscount = bestPromotionResult.DiscountAmount;
 
-            // Пропорційно розподіляємо знижку по товарах
             foreach (var item in itemList)
             {
                 var itemBase = item.PriceAfterProductPromotion * item.Quantity;
@@ -434,7 +428,6 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
                     })],
             };
 
-            // Визначаємо результат купона
             if (couponPromotion != null && applied.Id == couponPromotion.Id)
             {
                 couponResult = ApplyCouponResult.Applied;
