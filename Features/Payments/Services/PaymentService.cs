@@ -78,7 +78,7 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
 
     public async Task HandleLiqPayCallbackAsync(LiqPayStatusResponseDto callback)
     {
-        // Отримуємо Payment по LiqPayPaymentId
+        //  Payment по LiqPayPaymentId
         var payment = await db.Payments
             .Include(p => p.Order)
             .FirstOrDefaultAsync(p => p.Id.ToString() == callback.OrderId)
@@ -88,7 +88,6 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
         404
     );
 
-        // Оновлюємо статус
         payment.Status = callback.Status switch
         {
             "success" => PaymentStatus.Success,
@@ -154,7 +153,7 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
         if (payment.Status != PaymentStatus.Success)
             throw new ApiException("PAYMENT_STATUS_IS_NOT_SUCCESSFUL", "Only successful payments can be refunded", 404);
 
-        // Викликаємо LiqPayService для рефанду
+        // LiqPayService для рефанду
         await liqPayService.RefundPaymentAsync(payment.LiqPayPaymentId!, amount, reason);
 
         payment.Status = PaymentStatus.Refunded;
