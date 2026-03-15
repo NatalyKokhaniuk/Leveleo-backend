@@ -11,10 +11,10 @@ public static class SerilogConfiguration
 {
     public static void ConfigureSerilog(this WebApplicationBuilder builder)
     {
-        // Очищаємо дефолтні провайдери
+       
         builder.Logging.ClearProviders();
 
-        // Налаштовуємо Serilog
+        
         var logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -25,12 +25,12 @@ public static class SerilogConfiguration
             .Enrich.WithProperty("Application", "LeveLEO")
             //.Enrich.WithThreadId()
 
-            // Консоль - для Development (зручний формат)
+            
             .WriteTo.Console(
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
             )
 
-            // Файли - для всіх середовищ (детальний формат)
+            
             .WriteTo.File(
                 path: "logs/leveleo-.log",
                 rollingInterval: RollingInterval.Day,
@@ -39,32 +39,30 @@ public static class SerilogConfiguration
                 fileSizeLimitBytes: 10_000_000 // 10MB per file
             )
 
-            // Окремий файл для помилок (Error та Critical)
+            
             .WriteTo.File(
                 path: "logs/errors/leveleo-errors-.log",
                 restrictedToMinimumLevel: LogEventLevel.Error,
                 rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 90, // Зберігаємо помилки довше
+                retainedFileCountLimit: 90, 
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
             )
 
-            // JSON формат для машинної обробки (опціонально)
+            
             .WriteTo.File(
                 new CompactJsonFormatter(),
                 path: "logs/json/leveleo-.json",
                 rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 7 // Тримаємо тиждень JSON логів
+                retainedFileCountLimit: 7 
             )
 
-            // ДОДАТКОВО: Seq для Production (розкоментуй якщо використовуєш Seq)
+            // ДОДАТКОВО: Seq для Production 
             // .WriteTo.Seq("http://localhost:5341")
 
             .CreateLogger();
 
-        // Встановлюємо як глобальний logger
         Log.Logger = logger;
 
-        // Використовуємо Serilog як провайдер логування
         builder.Host.UseSerilog();
 
         Log.Information("✅ Serilog configured successfully");
@@ -77,10 +75,8 @@ public static class SerilogConfiguration
     {
         app.UseSerilogRequestLogging(options =>
         {
-            // Кастомізуємо повідомлення
             options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
 
-            // Збагачуємо лог додатковою інформацією
             options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
             {
                 var requestHost = httpContext.Request.Host.Value;
@@ -91,7 +87,6 @@ public static class SerilogConfiguration
                 diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
                 diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
 
-                // Якщо є UserId в claims
                 var userId = httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (!string.IsNullOrEmpty(userId))
                 {
@@ -99,7 +94,6 @@ public static class SerilogConfiguration
                 }
             };
 
-            // Рівень логування в залежності від статусу відповіді
             options.GetLevel = (httpContext, elapsed, ex) =>
             {
                 if (ex != null)
@@ -109,7 +103,7 @@ public static class SerilogConfiguration
                 if (httpContext.Response.StatusCode >= 400)
                     return LogEventLevel.Warning;
                 if (elapsed > 5000)
-                    return LogEventLevel.Warning; // Повільні запити > 5 сек
+                    return LogEventLevel.Warning; 
                 return LogEventLevel.Information;
             };
         });
