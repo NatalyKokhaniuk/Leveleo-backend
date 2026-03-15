@@ -37,7 +37,6 @@ public class AddressService(AppDbContext db) : IAddressService
 
         db.Addresses.Add(address);
 
-        // Зв'язуємо з користувачем через UserAddress
         var userAddress = new UserAddress
         {
             UserId = userId,
@@ -52,7 +51,6 @@ public class AddressService(AppDbContext db) : IAddressService
 
     public async Task<AddressResponseDto> UpdateAddressAsync(string userId, Guid addressId, UpdateAddressDto dto)
     {
-        // Перевіряємо, що адреса належить користувачу
         var userAddress = await db.UserAddresses
             .Include(ua => ua.Address)
             .FirstOrDefaultAsync(ua => ua.UserId == userId && ua.AddressId == addressId)
@@ -64,7 +62,6 @@ public class AddressService(AppDbContext db) : IAddressService
 
         var address = userAddress.Address;
 
-        // Оновлюємо поля
         if (dto.FirstName.HasValue)
         {
             if (string.IsNullOrWhiteSpace(dto.FirstName.Value))
@@ -138,10 +135,8 @@ public class AddressService(AppDbContext db) : IAddressService
                 404
             );
 
-        // Видаляємо зв'язок
         db.UserAddresses.Remove(userAddress);
 
-        // Видаляємо адресу (якщо вона не використовується в замовленнях)
         var usedInOrders = await db.Orders.AnyAsync(o => o.AddressId == addressId);
         if (!usedInOrders)
         {
@@ -174,14 +169,10 @@ public class AddressService(AppDbContext db) : IAddressService
 
     public async Task<AddressResponseDto> SetDefaultAddressAsync(string userId, Guid addressId)
     {
-        // Перевіряємо належність
         var userAddress = await db.UserAddresses
             .Include(ua => ua.Address)
             .FirstOrDefaultAsync(ua => ua.UserId == userId && ua.AddressId == addressId)
             ?? throw new ApiException("ADDRESS_NOT_FOUND", "Address not found.", 404);
-
-        // Тут можна додати поле IsDefault в UserAddress, якщо треба
-        // Поки що просто повертаємо адресу
 
         return MapToDto(userAddress.Address);
     }
@@ -217,7 +208,6 @@ public class AddressService(AppDbContext db) : IAddressService
 
     public AddressResponseDto MapToDto(Address address)
     {
-        // Формуємо адресу для відображення
         var formattedAddress = address.DeliveryType switch
         {
             DeliveryType.Warehouse =>
