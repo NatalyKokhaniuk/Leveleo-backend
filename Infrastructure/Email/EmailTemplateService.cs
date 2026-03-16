@@ -5,7 +5,7 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
     public string TwoFactorCode(string code)
     {
         var path = Path.Combine(
-            env.ContentRootPath,
+            AppContext.BaseDirectory,
             "Infrastructure",
             "Email",
             "Templates",
@@ -19,7 +19,7 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
     string IEmailTemplateService.GetPasswordResetEmail(string resetLink)
     {
         var path = Path.Combine(
-        env.ContentRootPath,
+        AppContext.BaseDirectory,
         "Infrastructure",
         "Email",
         "Templates",
@@ -33,7 +33,7 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
     string IEmailTemplateService.GetRegistrationConfirmationEmail(string confirmationLink)
     {
         var path = Path.Combine(
-        env.ContentRootPath,
+        AppContext.BaseDirectory,  // ← замість env.ContentRootPath
         "Infrastructure",
         "Email",
         "Templates",
@@ -47,7 +47,7 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
     public async Task<string> GetTemplateAsync(string templateName, Dictionary<string, string> replacements)
     {
         var path = Path.Combine(
-            env.ContentRootPath,
+            AppContext.BaseDirectory,
             "Infrastructure",
             "Email",
             "Templates",
