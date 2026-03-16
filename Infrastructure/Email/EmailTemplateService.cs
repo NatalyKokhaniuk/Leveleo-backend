@@ -39,7 +39,9 @@ public class EmailTemplateService(IWebHostEnvironment env) : IEmailTemplateServi
         "Templates",
         "ConfirmEmail.html"
     );
-
+        Console.WriteLine($"[EMAIL TEMPLATE] BaseDirectory: {AppContext.BaseDirectory}");
+        Console.WriteLine($"[EMAIL TEMPLATE] Full path: {path}");
+        Console.WriteLine($"[EMAIL TEMPLATE] File exists: {File.Exists(path)}");
         var html = File.ReadAllText(path);
         return html.Replace("{{CONFIRMATION_LINK}}", confirmationLink);
     }
