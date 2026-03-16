@@ -13,7 +13,7 @@ public class EmailSender(IConfiguration configuration) : IEmailSender
 
         var host = smtpSection["Host"] ?? "smtp.gmail.com";
 
-        var port = int.Parse(smtpSection["Port"] ?? "587");
+        var port = int.Parse(smtpSection["Port"] ?? "465");
         var username = smtpSection["Username"]!;
         var password = smtpSection["Password"]!;
         var from = smtpSection["From"] ?? "leveleo.service@gmail.com";
