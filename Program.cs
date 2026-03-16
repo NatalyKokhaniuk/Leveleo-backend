@@ -214,7 +214,7 @@ builder.Services.AddScoped<ISlugGenerator, SlugGenerator>();
 builder.Services.AddScoped<ILiqPayService, LiqPayService>();
 builder.Services.AddHttpClient<INovaPoshtaService, NovaPoshtaService>();
 builder.Services.AddScoped<IProductMediaService, ProductMediaService>();
-
+builder.Services.AddHttpClient();
 // =====================================================
 // EVENT BUS & HANDLERS
 // =====================================================
