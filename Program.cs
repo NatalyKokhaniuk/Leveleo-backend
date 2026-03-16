@@ -273,8 +273,10 @@ app.UseMiddleware<GlobalExceptionHandler>();
 
 // Serilog HTTP Request Logging
 app.UseSerilogRequestLogging();
-
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -282,12 +284,16 @@ app.UseAuthorization();
 // =====================================================
 // API DOCUMENTATION
 // =====================================================
-app.Use((context, next) =>
+if (!app.Environment.IsDevelopment())
 {
-    // Примусово ставимо HTTPS-схему для скаляра та інших URL
-    context.Request.Scheme = "https";
-    return next();
-});
+    app.Use((context, next) =>
+    {
+        // Примусово ставимо HTTPS-схему для скаляра та інших URL
+        context.Request.Scheme = "https";
+        return next();
+    });
+}
+
 app.MapScalarApiReference(options =>
 {
     options.Title = "LeveLEO API Документація";

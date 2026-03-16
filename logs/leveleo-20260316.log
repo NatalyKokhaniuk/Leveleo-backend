@@ -1,0 +1,244 @@
+2026-03-16 02:10:08.590 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-16 02:10:08.653 +02:00 [INF] [] ℹ️ Using InMemory cache (Redis not configured)
+2026-03-16 02:10:08.813 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-16 02:10:08.818 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-16 02:10:08.820 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-16 02:10:08.821 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-16 02:10:08.823 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-16 02:10:08.824 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-16 02:10:08.826 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-16 02:10:08.828 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-16 02:10:08.830 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-16 02:10:08.832 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ProductCreatedNewsletterHandler to ProductCreatedEvent
+2026-03-16 02:10:08.834 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PromotionCreatedNewsletterHandler to PromotionCreatedEvent
+2026-03-16 02:10:08.835 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-16 02:10:08.836 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-16 02:10:08.963 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-16 02:10:09.012 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-16 02:10:09.014 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-16 02:10:09.018 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-16 02:10:17.451 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar responded 302 in 31.4685 ms
+2026-03-16 02:10:17.571 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 95.0021 ms
+2026-03-16 02:10:17.582 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 5.7686 ms
+2026-03-16 02:10:17.582 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 5.4273 ms
+2026-03-16 02:10:18.251 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 385.0592 ms
+2026-03-16 02:10:18.608 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 356.7646 ms
+2026-03-16 02:10:47.318 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'RefreshToken'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:47.328 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'Order'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:47.334 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'CouponAssignment'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:47.340 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserAddress'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:47.345 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'ShoppingCart'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:47.351 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserComparison'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:47.356 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserFavorite'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:10:50.801 +02:00 [ERR] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/auth/resend-confirmation responded 500 in 5074.6567 ms
+System.ArgumentNullException: Value cannot be null. (Parameter 'address')
+   at System.ArgumentNullException.Throw(String paramName)
+   at System.ArgumentNullException.ThrowIfNull(Object argument, String paramName)
+   at System.ArgumentException.ThrowNullOrEmptyException(String argument, String paramName)
+   at System.ArgumentException.ThrowIfNullOrEmpty(String argument, String paramName)
+   at System.Net.Mail.MailAddress.TryParse(String address, String displayName, Encoding displayNameEncoding, ValueTuple`4& parsedData, Boolean throwExceptionIfFail)
+   at System.Net.Mail.MailAddress..ctor(String address)
+   at LeveLEO.Infrastructure.Email.EmailSender.SendEmailAsync(String email, String subject, String htmlMessage) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Infrastructure\Email\EmailSender.cs:line 28
+   at LeveLEO.Features.Identity.Services.AuthService.ResendConfirmationEmailAsync(ResendEmailRequestDto request, String backendBaseUrl) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Services\AuthService.cs:line 79
+   at LeveLEO.Features.Identity.Controllers.AuthController.ResendConfirmationEmail(ResendEmailRequestDto request) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Controllers\AuthController.cs:line 47
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)
+2026-03-16 02:24:00.339 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-16 02:24:00.397 +02:00 [INF] [] ℹ️ Using InMemory cache (Redis not configured)
+2026-03-16 02:24:00.566 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-16 02:24:00.570 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-16 02:24:00.572 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-16 02:24:00.574 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-16 02:24:00.576 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-16 02:24:00.578 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-16 02:24:00.580 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-16 02:24:00.582 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-16 02:24:00.584 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-16 02:24:00.586 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ProductCreatedNewsletterHandler to ProductCreatedEvent
+2026-03-16 02:24:00.588 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PromotionCreatedNewsletterHandler to PromotionCreatedEvent
+2026-03-16 02:24:00.590 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-16 02:24:00.591 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-16 02:24:00.700 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-16 02:24:00.742 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-16 02:24:00.745 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-16 02:24:00.747 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-16 02:24:13.006 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 124.8247 ms
+2026-03-16 02:24:13.031 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 5.1051 ms
+2026-03-16 02:24:13.032 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 3.0427 ms
+2026-03-16 02:24:13.520 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 378.5925 ms
+2026-03-16 02:24:13.847 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 330.1709 ms
+2026-03-16 02:24:31.698 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'RefreshToken'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:31.711 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'Order'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:31.716 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'CouponAssignment'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:31.722 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserAddress'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:31.727 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'ShoppingCart'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:31.733 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserComparison'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:31.739 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserFavorite'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:24:36.572 +02:00 [ERR] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/auth/resend-confirmation responded 500 in 5951.1130 ms
+System.Net.Mail.SmtpException: The SMTP server requires a secure connection or the client was not authenticated. The server response was: 5.7.0 Authentication Required. For more information, go to
+   at System.Net.Mail.MailCommand.CheckResponse(SmtpStatusCode statusCode, String response)
+   at System.Net.Mail.MailCommand.<SendAsync>g__SendAndCheck|0_0[TIOAdapter](SmtpConnection conn, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpTransport.SendMailAsync[TIOAdapter](MailAddress sender, MailAddressCollection recipients, String deliveryNotify, Boolean allowUnicode, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.SendAsyncInternal[TIOAdapter](MailMessage message, Boolean invokeSendCompleted, Object userToken, Boolean forceWrapExceptions, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.<SendMailAsync>g__WaitAndRethrowIfNeeded|75_0(Task`1 task)
+   at LeveLEO.Infrastructure.Email.EmailSender.SendEmailAsync(String email, String subject, String htmlMessage) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Infrastructure\Email\EmailSender.cs:line 39
+   at LeveLEO.Features.Identity.Services.AuthService.ResendConfirmationEmailAsync(ResendEmailRequestDto request, String backendBaseUrl) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Services\AuthService.cs:line 79
+   at LeveLEO.Features.Identity.Controllers.AuthController.ResendConfirmationEmail(ResendEmailRequestDto request) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Controllers\AuthController.cs:line 47
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)
+2026-03-16 02:29:05.083 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-16 02:29:05.138 +02:00 [INF] [] ℹ️ Using InMemory cache (Redis not configured)
+2026-03-16 02:29:05.272 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-16 02:29:05.277 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-16 02:29:05.280 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-16 02:29:05.282 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-16 02:29:05.283 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-16 02:29:05.285 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-16 02:29:05.286 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-16 02:29:05.288 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-16 02:29:05.289 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-16 02:29:05.291 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ProductCreatedNewsletterHandler to ProductCreatedEvent
+2026-03-16 02:29:05.292 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PromotionCreatedNewsletterHandler to PromotionCreatedEvent
+2026-03-16 02:29:05.294 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-16 02:29:05.295 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-16 02:29:05.399 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-16 02:29:05.438 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-16 02:29:05.442 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-16 02:29:05.443 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-16 02:29:21.453 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'RefreshToken'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:21.472 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'Order'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:21.479 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'CouponAssignment'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:21.486 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserAddress'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:21.492 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'ShoppingCart'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:21.499 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserComparison'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:21.504 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserFavorite'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 02:29:25.340 +02:00 [ERR] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/auth/resend-confirmation responded 500 in 5337.8350 ms
+System.Net.Mail.SmtpException: The SMTP server requires a secure connection or the client was not authenticated. The server response was: 5.7.0 Authentication Required. For more information, go to
+   at System.Net.Mail.MailCommand.CheckResponse(SmtpStatusCode statusCode, String response)
+   at System.Net.Mail.MailCommand.<SendAsync>g__SendAndCheck|0_0[TIOAdapter](SmtpConnection conn, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpTransport.SendMailAsync[TIOAdapter](MailAddress sender, MailAddressCollection recipients, String deliveryNotify, Boolean allowUnicode, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.SendAsyncInternal[TIOAdapter](MailMessage message, Boolean invokeSendCompleted, Object userToken, Boolean forceWrapExceptions, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.<SendMailAsync>g__WaitAndRethrowIfNeeded|75_0(Task`1 task)
+   at LeveLEO.Infrastructure.Email.EmailSender.SendEmailAsync(String email, String subject, String htmlMessage) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Infrastructure\Email\EmailSender.cs:line 41
+   at LeveLEO.Features.Identity.Services.AuthService.ResendConfirmationEmailAsync(ResendEmailRequestDto request, String backendBaseUrl) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Services\AuthService.cs:line 79
+   at LeveLEO.Features.Identity.Controllers.AuthController.ResendConfirmationEmail(ResendEmailRequestDto request) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Controllers\AuthController.cs:line 47
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)
+2026-03-16 02:38:54.105 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 99.4869 ms
+2026-03-16 02:38:54.135 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 5.5408 ms
+2026-03-16 02:38:54.135 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 5.5416 ms
+2026-03-16 02:38:54.580 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 333.6777 ms
+2026-03-16 02:38:54.890 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 309.8076 ms
+2026-03-16 02:39:03.327 +02:00 [ERR] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/auth/resend-confirmation responded 500 in 2579.3753 ms
+System.Net.Mail.SmtpException: The SMTP server requires a secure connection or the client was not authenticated. The server response was: 5.7.0 Authentication Required. For more information, go to
+   at System.Net.Mail.MailCommand.CheckResponse(SmtpStatusCode statusCode, String response)
+   at System.Net.Mail.MailCommand.<SendAsync>g__SendAndCheck|0_0[TIOAdapter](SmtpConnection conn, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpTransport.SendMailAsync[TIOAdapter](MailAddress sender, MailAddressCollection recipients, String deliveryNotify, Boolean allowUnicode, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.SendAsyncInternal[TIOAdapter](MailMessage message, Boolean invokeSendCompleted, Object userToken, Boolean forceWrapExceptions, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.<SendMailAsync>g__WaitAndRethrowIfNeeded|75_0(Task`1 task)
+   at LeveLEO.Infrastructure.Email.EmailSender.SendEmailAsync(String email, String subject, String htmlMessage) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Infrastructure\Email\EmailSender.cs:line 41
+   at LeveLEO.Features.Identity.Services.AuthService.ResendConfirmationEmailAsync(ResendEmailRequestDto request, String backendBaseUrl) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Services\AuthService.cs:line 79
+   at LeveLEO.Features.Identity.Controllers.AuthController.ResendConfirmationEmail(ResendEmailRequestDto request) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Controllers\AuthController.cs:line 47
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)
+2026-03-16 03:14:10.579 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 3.1840 ms
+2026-03-16 03:14:10.616 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 0.3259 ms
+2026-03-16 03:14:10.616 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 0.3635 ms
+2026-03-16 03:14:11.214 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 450.0334 ms
+2026-03-16 03:14:11.507 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 290.8244 ms
+2026-03-16 03:14:29.789 +02:00 [ERR] [Microsoft.EntityFrameworkCore.Database.Connection] An error occurred using the connection to database 'railway' on server 'tcp://turntable.proxy.rlwy.net:40371'.
+2026-03-16 03:14:32.165 +02:00 [ERR] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/auth/resend-confirmation responded 500 in 4017.0080 ms
+System.Net.Mail.SmtpException: The SMTP server requires a secure connection or the client was not authenticated. The server response was: 5.7.0 Authentication Required. For more information, go to
+   at System.Net.Mail.MailCommand.CheckResponse(SmtpStatusCode statusCode, String response)
+   at System.Net.Mail.MailCommand.<SendAsync>g__SendAndCheck|0_0[TIOAdapter](SmtpConnection conn, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpTransport.SendMailAsync[TIOAdapter](MailAddress sender, MailAddressCollection recipients, String deliveryNotify, Boolean allowUnicode, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.SendAsyncInternal[TIOAdapter](MailMessage message, Boolean invokeSendCompleted, Object userToken, Boolean forceWrapExceptions, CancellationToken cancellationToken)
+   at System.Net.Mail.SmtpClient.<SendMailAsync>g__WaitAndRethrowIfNeeded|75_0(Task`1 task)
+   at LeveLEO.Infrastructure.Email.EmailSender.SendEmailAsync(String email, String subject, String htmlMessage) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Infrastructure\Email\EmailSender.cs:line 41
+   at LeveLEO.Features.Identity.Services.AuthService.ResendConfirmationEmailAsync(ResendEmailRequestDto request, String backendBaseUrl) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Services\AuthService.cs:line 79
+   at LeveLEO.Features.Identity.Controllers.AuthController.ResendConfirmationEmail(ResendEmailRequestDto request) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Features\Identity\Controllers\AuthController.cs:line 47
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)
+2026-03-16 03:51:29.784 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-16 03:51:29.843 +02:00 [INF] [] ℹ️ Using InMemory cache (Redis not configured)
+2026-03-16 03:51:31.098 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-16 03:51:31.104 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-16 03:51:31.108 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-16 03:51:31.111 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-16 03:51:31.113 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-16 03:51:31.116 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-16 03:51:31.118 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-16 03:51:31.121 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-16 03:51:31.123 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-16 03:51:31.125 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ProductCreatedNewsletterHandler to ProductCreatedEvent
+2026-03-16 03:51:31.127 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PromotionCreatedNewsletterHandler to PromotionCreatedEvent
+2026-03-16 03:51:31.129 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-16 03:51:31.130 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-16 03:51:31.421 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-16 03:51:31.484 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-16 03:51:31.489 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-16 03:51:31.491 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-16 03:51:33.374 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/ responded 200 in 117.0610 ms
+2026-03-16 03:51:33.402 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.js responded 304 in 4.2159 ms
+2026-03-16 03:51:33.402 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /scalar/scalar.aspnetcore.js responded 304 in 4.2160 ms
+2026-03-16 03:51:33.935 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 421.2756 ms
+2026-03-16 03:51:34.265 +02:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /openapi/v1.json responded 200 in 332.6898 ms
+2026-03-16 03:51:50.562 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'RefreshToken'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:50.574 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'Order'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:50.579 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'CouponAssignment'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:50.585 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserAddress'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:50.590 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'ShoppingCart'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:50.595 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserComparison'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:50.602 +02:00 [WRN] [Microsoft.EntityFrameworkCore.Model.Validation] Entity 'ApplicationUser' has a global query filter defined and is the required end of a relationship with the entity 'UserFavorite'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+2026-03-16 03:51:52.830 +02:00 [ERR] [Microsoft.EntityFrameworkCore.Database.Connection] An error occurred using the connection to database 'railway' on server 'tcp://turntable.proxy.rlwy.net:40371'.
+2026-03-16 03:51:57.630 +02:00 [WRN] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/auth/resend-confirmation responded 200 in 8746.4284 ms

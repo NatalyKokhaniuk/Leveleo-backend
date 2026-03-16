@@ -48,7 +48,9 @@ public class AuthService(
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var confirmationLink = $"{backendBaseUrl.TrimEnd('/')}/api/auth/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
         var htmlMessage = emailTemplateService.GetRegistrationConfirmationEmail(confirmationLink);
-        await emailSender.SendEmailAsync(user.Email!, "Підтвердження реєстрації в LeveLEO", htmlMessage);
+        Console.WriteLine($"Request.Email: {request.Email}");
+        Console.WriteLine($"User.Email: {user.Email ?? "NULL"}");
+        await emailSender.SendEmailAsync(request.Email, "Підтвердження реєстрації в LeveLEO", htmlMessage);
     }
 
     public async Task ConfirmEmailAsync(string userId, string token)
@@ -72,6 +74,8 @@ public class AuthService(
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var confirmationLink = $"{backendBaseUrl.TrimEnd('/')}/api/auth/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
         var htmlMessage = emailTemplateService.GetRegistrationConfirmationEmail(confirmationLink);
+        Console.WriteLine($"Request.Email: {request.Email}");
+        Console.WriteLine($"User.Email: {user.Email ?? "NULL"}");
         await emailSender.SendEmailAsync(request.Email, "Повторне підтвердження реєстрації в LeveLEO", htmlMessage);
     }
 
