@@ -1,4 +1,5 @@
-﻿using LeveLEO.Features.Identity;
+﻿using LeveLEO.Data;
+using LeveLEO.Features.Identity;
 using LeveLEO.Features.Identity.DTO;
 using LeveLEO.Features.Identity.Enums;
 using LeveLEO.Features.Identity.Models;
@@ -22,7 +23,8 @@ public class AuthService(
     IEmailSender emailSender,
     IJwtService jwtService,
     IEmailTemplateService emailTemplateService,
-    ISmsSender smsSender) : IAuthService
+    ISmsSender smsSender,
+    AppDbContext dbContext) : IAuthService
 {
     // ================== REGISTER / EMAIL ==================
     public async Task RegisterAsync(RegisterRequestDto request, string backendBaseUrl)
@@ -111,16 +113,20 @@ public class AuthService(
         var accessToken = jwtService.GenerateAccessToken(user);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUserDto = await BuildAuthUserDto(user);
+
+        Console.WriteLine("=== LOGIN DEBUG ===");
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
             ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
-            User = user
+            UserId = user.Id
         };
 
-        user.RefreshTokens.Add(refreshTokenEntity);
-        await userManager.UpdateAsync(user);
+        dbContext.RefreshTokens.Add(refreshTokenEntity);
+        await dbContext.SaveChangesAsync();
+        Console.WriteLine("Saved hash: " + jwtService.HashRefreshToken(refreshToken));
+
         return (new AuthResponseDto { User = authUserDto, AccessToken = accessToken }, refreshToken);
     }
 
@@ -129,18 +135,11 @@ public class AuthService(
         if (string.IsNullOrEmpty(refreshToken))
             return;
         var tokenHash = jwtService.HashRefreshToken(refreshToken);
-        var user = await userManager.Users
-            .Include(u => u.RefreshTokens)
-            .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.TokenHash == tokenHash));
-
-        if (user != null)
+        var token = await dbContext.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == tokenHash);
+        if (token != null)
         {
-            var token = user.RefreshTokens.FirstOrDefault(t => t.TokenHash == tokenHash);
-            if (token != null)
-            {
-                user.RefreshTokens.Remove(token);
-                await userManager.UpdateAsync(user);
-            }
+            dbContext.RefreshTokens.Remove(token);
+            await dbContext.SaveChangesAsync();
         }
     }
 
@@ -164,33 +163,66 @@ public class AuthService(
         var accessToken = jwtService.GenerateAccessToken(user);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUser = await BuildAuthUserDto(user);
+
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
             ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
-            User = user
+            UserId = user.Id
         };
-        user.RefreshTokens.Add(refreshTokenEntity);
-        await userManager.UpdateAsync(user);
+        dbContext.RefreshTokens.Add(refreshTokenEntity);
+        await dbContext.SaveChangesAsync();
 
         return (new AuthResponseDto { User = authUser, AccessToken = accessToken }, refreshToken);
     }
 
-    public async Task<AuthResponseDto> RefreshAccessTokenAsync(string refreshToken)
+    public async Task<(AuthResponseDto? authResponse, string? RefreshToken, DateTimeOffset expiresAt)> RefreshAccessTokenAsync(string refreshToken)
     {
-        var userId = jwtService.ValidateRefreshToken(refreshToken);
-        var user = await userManager.FindByIdAsync(userId) ?? throw new ApiException("INVALID_REFRESH_TOKEN", "Invalid refresh token", 401);
         var tokenHash = jwtService.HashRefreshToken(refreshToken);
-        var storedToken = user.RefreshTokens.FirstOrDefault(t => t.TokenHash == tokenHash);
-        if (storedToken == null || storedToken.ExpiresAt <= DateTime.UtcNow)
-        {
+        Console.WriteLine("=== REFRESH DEBUG ===");
+        Console.WriteLine("Token: " + refreshToken);
+        Console.WriteLine("Hash: " + tokenHash);
+
+        var storedToken = await dbContext.RefreshTokens
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash)
+            ?? throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401);
+
+        if (storedToken.ExpiresAt <= DateTime.UtcNow)
             throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401);
-        }
+
+        if (storedToken.CreatedAt.Add(TimeSpan.FromDays(30)) <= DateTime.UtcNow)
+            throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired", 401);
+
+        var user = await userManager.FindByIdAsync(storedToken.UserId)
+            ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
+
+        // cleanup expired tokens
+        var expiredTokens = await dbContext.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.ExpiresAt <= DateTime.UtcNow)
+            .ToListAsync();
+        dbContext.RefreshTokens.RemoveRange(expiredTokens);
+
+        // rotation
+        dbContext.RefreshTokens.Remove(storedToken);
+
+        var newRefreshToken = jwtService.GenerateRefreshToken();
+        var newRefreshTokenEntity = new RefreshToken
+        {
+            TokenHash = jwtService.HashRefreshToken(newRefreshToken),
+            ExpiresAt = storedToken.ExpiresAt,
+            CreatedAt = DateTime.UtcNow,
+            UserId = user.Id
+        };
+
+        dbContext.RefreshTokens.Add(newRefreshTokenEntity);
+        await dbContext.SaveChangesAsync();
 
         var accessToken = jwtService.GenerateAccessToken(user);
         var authUser = await BuildAuthUserDto(user);
-        return new AuthResponseDto { User = authUser, AccessToken = accessToken };
+
+        return (new AuthResponseDto { User = authUser, AccessToken = accessToken }, newRefreshToken, storedToken.ExpiresAt);
     }
 
     // ================== 2FA ==================
@@ -248,11 +280,9 @@ public class AuthService(
         if (method == TwoFactorMethod.None)
             throw new ApiException("INVALID_2FA_METHOD", "Invalid 2FA method", 400);
 
-        // Перевірка коду для Email/SMS
         if ((method == TwoFactorMethod.Email || method == TwoFactorMethod.Sms) && claims.code != request.Code)
             throw new ApiException("INVALID_2FA_CODE", "Invalid 2FA code", 400);
 
-        // TOTP
         if (method == TwoFactorMethod.Totp)
         {
             if (string.IsNullOrEmpty(appUser.TotpSecret))
@@ -260,16 +290,15 @@ public class AuthService(
 
             if (!VerifyTotp(appUser.TotpSecret, request.Code))
                 throw new ApiException("INVALID_TOTP_CODE", "Invalid TOTP code", 400);
-            var codes = Enumerable.Range(0, 10)
-        .Select(_ => RandomNumberGenerator.GetInt32(10000000, 99999999).ToString())
-        .ToList();
 
+            var codes = Enumerable.Range(0, 10)
+                .Select(_ => RandomNumberGenerator.GetInt32(10000000, 99999999).ToString())
+                .ToList();
             appUser.BackupCodes = string.Join(",", codes);
         }
 
         appUser.TwoFactorEnabled = true;
         appUser.TwoFactorMethod = method;
-
         await userManager.UpdateAsync(appUser);
 
         return new ConfirmTwoFactorSetupResponseDto
@@ -351,9 +380,7 @@ public class AuthService(
         var result = await userManager.UpdateAsync(user);
 
         if (!result.Succeeded)
-        {
             throw new ApiException("DISABLE_2FA_FAILED", "Disabling 2FA failed", 400);
-        }
 
         return new DisableTwoFactorResponseDto
         {
@@ -369,12 +396,11 @@ public class AuthService(
         if (existingCodes.Count >= 10)
             return existingCodes;
         var newCodes = Enumerable.Range(0, 10 - existingCodes.Count)
-        .Select(_ => RandomNumberGenerator.GetInt32(10000000, 99999999).ToString())
-        .ToList();
+            .Select(_ => RandomNumberGenerator.GetInt32(10000000, 99999999).ToString())
+            .ToList();
         existingCodes.AddRange(newCodes);
         user.BackupCodes = string.Join(",", existingCodes);
         await userManager.UpdateAsync(user);
-
         return existingCodes;
     }
 
@@ -395,7 +421,6 @@ public class AuthService(
             throw new ApiException("NO_BACKUP_CODES", "No backup codes available", 400);
 
         var codes = user.BackupCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-
         if (!codes.Contains(request.BackupCode))
             throw new ApiException("INVALID_BACKUP_CODE", "Invalid backup code", 400);
 
@@ -406,16 +431,16 @@ public class AuthService(
         var accessToken = jwtService.GenerateAccessToken(user);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUser = await BuildAuthUserDto(user);
+
         var refreshTokenEntity = new RefreshToken
         {
             TokenHash = jwtService.HashRefreshToken(refreshToken),
             ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
-            User = user
+            UserId = user.Id
         };
-
-        user.RefreshTokens.Add(refreshTokenEntity);
-        await userManager.UpdateAsync(user);
+        dbContext.RefreshTokens.Add(refreshTokenEntity);
+        await dbContext.SaveChangesAsync();
 
         return (new AuthResponseDto { User = authUser, AccessToken = accessToken }, refreshToken);
     }
@@ -424,13 +449,10 @@ public class AuthService(
     {
         var user = await userManager.FindByEmailAsync(request.Email);
         if (user == null || !user.EmailConfirmed)
-        {
             return;
-        }
 
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         var resetLink = $"{frontendBaseUrl.TrimEnd('/')}/reset-password?userId={user.Id}&token={Uri.EscapeDataString(token)}";
-
         var emailHtml = emailTemplateService.GetPasswordResetEmail(resetLink);
         await emailSender.SendEmailAsync(user.Email!, "Скидання пароля", emailHtml);
     }
@@ -440,22 +462,12 @@ public class AuthService(
         var user = await userManager.FindByIdAsync(request.UserId)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
-        var result = await userManager.ResetPasswordAsync(
-            user,
-            request.Token,
-            request.NewPassword
-        );
-
+        var result = await userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
         if (!result.Succeeded)
-            throw new ApiException(
-                "PASSWORD_RESET_FAILED",
-                "Password reset failed",
-                400,
-                IdentityErrorMapper.Map(result.Errors)
-            );
-        user.RefreshTokens.Clear();
+            throw new ApiException("PASSWORD_RESET_FAILED", "Password reset failed", 400, IdentityErrorMapper.Map(result.Errors));
+
+        await dbContext.RefreshTokens.Where(t => t.UserId == user.Id).ExecuteDeleteAsync();
         await userManager.UpdateSecurityStampAsync(user);
-        await userManager.UpdateAsync(user);
     }
 
     public async Task ChangePasswordAsync(string userId, ChangePasswordRequestDto request)
@@ -464,25 +476,12 @@ public class AuthService(
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
         var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
-
-        var result = await userManager.ResetPasswordAsync(
-            user,
-            resetToken,
-            request.NewPassword
-        );
-
+        var result = await userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
         if (!result.Succeeded)
-        {
-            throw new ApiException(
-                "CHANGE_PASSWORD_FAILED",
-                "Password change failed",
-                400,
-                IdentityErrorMapper.Map(result.Errors)
-            );
-        }
-        user.RefreshTokens.Clear();
+            throw new ApiException("CHANGE_PASSWORD_FAILED", "Password change failed", 400, IdentityErrorMapper.Map(result.Errors));
+
+        await dbContext.RefreshTokens.Where(t => t.UserId == user.Id).ExecuteDeleteAsync();
         await userManager.UpdateSecurityStampAsync(user);
-        await userManager.UpdateAsync(user);
     }
 
     public async Task LogoutFromAllDevicesAsync(string userId)
@@ -490,8 +489,7 @@ public class AuthService(
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
-        user.RefreshTokens.Clear();
-        await userManager.UpdateAsync(user);
+        await dbContext.RefreshTokens.Where(t => t.UserId == user.Id).ExecuteDeleteAsync();
         await userManager.UpdateSecurityStampAsync(user);
     }
 
@@ -500,7 +498,6 @@ public class AuthService(
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
 
-        // Очищення полів для анонімізації
         user.Email = $"deleted_{Guid.NewGuid()}@example.com";
         user.UserName = user.Email;
         user.FirstName = null;
@@ -508,18 +505,15 @@ public class AuthService(
         user.PhoneNumber = null;
         user.AvatarKey = null;
         user.IsActive = false;
-        user.RefreshTokens.Clear();
         user.TwoFactorEnabled = false;
         user.TwoFactorMethod = TwoFactorMethod.None;
         user.TotpSecret = null;
         user.BackupCodes = null;
+        user.IsDeleted = true;
 
-        user.IsDeleted = true; // прапорець soft delete
+        await dbContext.RefreshTokens.Where(t => t.UserId == user.Id).ExecuteDeleteAsync();
         await userManager.UpdateSecurityStampAsync(user);
         await userManager.UpdateAsync(user);
-
-        //  можна викликати подію або хук, щоб інші сутності знали про видалення
-        // await _userDeletionPublisher.PublishAsync(user.Id);
     }
 
     public async Task<(AuthResponseDto authResponse, string refreshToken)> GenerateAuthResponseAsync(ApplicationUser user)
@@ -528,14 +522,11 @@ public class AuthService(
             throw new ApiException("USER_NOT_FOUND", "User not found", 404);
         if (!user.IsActive)
             throw new ApiException("USER_INACTIVE", "User is inactive", 403);
-
-        // можна перевірити EmailConfirmed, якщо потрібно
         if (!await userManager.IsEmailConfirmedAsync(user))
             throw new ApiException("EMAIL_NOT_CONFIRMED", "Email is not confirmed", 403);
 
         var accessToken = jwtService.GenerateAccessToken(user);
         var refreshToken = jwtService.GenerateRefreshToken();
-
         var authUserDto = await BuildAuthUserDto(user);
 
         var refreshTokenEntity = new RefreshToken
@@ -543,11 +534,10 @@ public class AuthService(
             TokenHash = jwtService.HashRefreshToken(refreshToken),
             ExpiresAt = DateTime.UtcNow.AddDays(30),
             CreatedAt = DateTime.UtcNow,
-            User = user
+            UserId = user.Id
         };
-
-        user.RefreshTokens.Add(refreshTokenEntity);
-        await userManager.UpdateAsync(user);
+        dbContext.RefreshTokens.Add(refreshTokenEntity);
+        await dbContext.SaveChangesAsync();
 
         return (new AuthResponseDto { User = authUserDto, AccessToken = accessToken }, refreshToken);
     }

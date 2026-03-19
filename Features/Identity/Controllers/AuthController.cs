@@ -26,11 +26,12 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
     // ================== EMAIL CONFIRMATION ==================
     [HttpGet("confirm-email")]
     [AllowAnonymous]
-    public async Task<IActionResult> ConfirmEmail(string userId, string token)
+    public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
     {
         try
         {
-            await authService.ConfirmEmailAsync(userId, token);
+            var decodedToken = Uri.UnescapeDataString(token); // ← додай це
+            await authService.ConfirmEmailAsync(userId, decodedToken);
             return Redirect($"{config["Frontend:Url"]}/email-confirmed");
         }
         catch (ApiException ex)
@@ -54,6 +55,8 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
     public async Task<IActionResult> Login([FromBody] LoginDto request)
     {
         Console.WriteLine("Login endpoint hit");
+        Console.WriteLine($"IsDevelopment: {env.IsDevelopment()}");
+        Console.WriteLine($"SameSite: {(env.IsDevelopment() ? "Lax" : "None")}");
         var internalRequest = new LoginRequest
         {
             Email = request.Email,
@@ -71,7 +74,7 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
             {
                 HttpOnly = true,
                 Secure = !isLocal,
-                SameSite = SameSiteMode.None,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
         }
@@ -90,11 +93,12 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
         await authService.LogoutAsync(refreshToken);
         if (Request.Cookies.ContainsKey("refreshToken"))
         {
+            var isLocal = env.IsDevelopment();
             Response.Cookies.Delete("refreshToken", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None
+                Secure = !isLocal,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
             });
         }
 
@@ -107,8 +111,25 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
     {
         if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
             throw new ApiException("REFRESH_TOKEN_MISSING", "Refresh token is missing", 401);
+        Console.WriteLine("Refresh token from cookie: " + refreshToken);
 
-        var authResponse = await authService.RefreshAccessTokenAsync(refreshToken);
+        var (authResponse, newRefreshToken, expiresAt) =
+    await authService.RefreshAccessTokenAsync(refreshToken);
+        if (authResponse == null)
+            throw new ApiException("LOGIN_FAILED", "Authentication failed", 400);
+
+        if (newRefreshToken != null)
+        {
+            var isLocal = env.IsDevelopment();
+            Response.Cookies.Append("refreshToken", newRefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
+                Secure = !isLocal,
+                Expires = expiresAt
+            });
+        }
+
         return Ok(authResponse);
     }
 
@@ -143,7 +164,7 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
             {
                 HttpOnly = true,
                 Secure = !isLocal,
-                SameSite = SameSiteMode.None,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
         }
@@ -192,7 +213,7 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
             {
                 HttpOnly = true,
                 Secure = !isLocal,
-                SameSite = SameSiteMode.None,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
         }
@@ -243,11 +264,12 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
             ?? throw new ApiException("UNAUTHORIZED", "Unauthorized", 401);
         if (Request.Cookies.ContainsKey("refreshToken"))
         {
+            var isLocal = env.IsDevelopment();
             Response.Cookies.Delete("refreshToken", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None
+                Secure = !isLocal,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None
             });
         }
         await authService.LogoutFromAllDevicesAsync(userId);
@@ -265,11 +287,12 @@ public class AuthController(IWebHostEnvironment env, IAuthService authService, I
 
         if (Request.Cookies.ContainsKey("refreshToken"))
         {
+            var isLocal = env.IsDevelopment();
             Response.Cookies.Delete("refreshToken", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None
+                Secure = !isLocal,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
             });
         }
 

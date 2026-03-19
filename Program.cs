@@ -132,7 +132,7 @@ builder.Services.AddAuthorizationBuilder()
 // =====================================================
 // REDIS CACHING (якщо доступний) або In-Memory
 // =====================================================
-var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION");
+var redisConnection = Environment.GetEnvironmentVariable("REDIS__CONNECTION");
 
 if (!string.IsNullOrEmpty(redisConnection))
 {

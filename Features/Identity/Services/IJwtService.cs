@@ -13,7 +13,7 @@ public interface IJwtService
 
     string ValidateTwoFactorToken(string token);
 
-    string ValidateRefreshToken(string refreshToken);
+    //string ValidateRefreshToken(string refreshToken);
 
     (string userId, string? code, string? method) GetTwoFactorTokenClaims(string token);
 

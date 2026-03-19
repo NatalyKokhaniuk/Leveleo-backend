@@ -9,7 +9,12 @@ namespace LeveLEO.Features.Identity.Controllers;
 
 [Route("api/auth/social")]
 [ApiController]
-public class SocialAuthController(IWebHostEnvironment env, ISocialAuthService socialAuthService, IJwtService jwtService, UserManager<ApplicationUser> userManager, AuthService authService) : ControllerBase
+public class SocialAuthController(
+    IWebHostEnvironment env,
+    ISocialAuthService socialAuthService,
+    IJwtService jwtService,
+    UserManager<ApplicationUser> userManager,
+    IAuthService authService) : ControllerBase
 {
     // ================== GOOGLE LOGIN ==================
     [HttpPost("google")]
@@ -53,11 +58,11 @@ public class SocialAuthController(IWebHostEnvironment env, ISocialAuthService so
             {
                 HttpOnly = true,
                 Secure = !isLocal,
-                SameSite = SameSiteMode.None,
+                SameSite = isLocal ? SameSiteMode.Lax : SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
         }
 
-        return Ok(authResponse); 
+        return Ok(authResponse);
     }
 }

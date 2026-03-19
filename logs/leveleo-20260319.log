@@ -1,0 +1,27 @@
+2026-03-19 00:20:17.861 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-19 00:20:26.303 +02:00 [WRN] [] ⚠️ Redis connection failed, falling back to InMemory cache
+StackExchange.Redis.RedisConnectionException: It was not possible to connect to the redis server(s). Error connecting right now. To allow this multiplexer to continue retrying until it's able to connect, use abortConnect=false in your connection string or AbortOnConnectFail=false; in your code.
+   at StackExchange.Redis.ConnectionMultiplexer.ConnectImpl(ConfigurationOptions configuration, TextWriter writer, Nullable`1 serverType, EndPointCollection endpoints) in /_/src/StackExchange.Redis/ConnectionMultiplexer.cs:line 716
+   at StackExchange.Redis.ConnectionMultiplexer.Connect(ConfigurationOptions configuration, TextWriter log) in /_/src/StackExchange.Redis/ConnectionMultiplexer.cs:line 678
+   at StackExchange.Redis.ConnectionMultiplexer.Connect(String configuration, TextWriter log) in /_/src/StackExchange.Redis/ConnectionMultiplexer.cs:line 656
+   at Program.<Main>$(String[] args) in C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO\Program.cs:line 141
+2026-03-19 00:20:27.607 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCreatedEmailHandler to OrderCreatedEvent
+2026-03-19 00:20:27.613 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidEmailHandler to OrderPaidEvent
+2026-03-19 00:20:27.614 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderShippedEmailHandler to OrderShippedEvent
+2026-03-19 00:20:27.616 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderCompletedEmailHandler to OrderCompletedEvent
+2026-03-19 00:20:27.618 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewApprovedEmailHandler to ReviewApprovedEvent
+2026-03-19 00:20:27.620 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewRejectedEmailHandler to ReviewRejectedEvent
+2026-03-19 00:20:27.621 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ReviewCreatedTaskHandler to ReviewCreatedEvent
+2026-03-19 00:20:27.623 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed OrderPaidTaskHandler to OrderPaidEvent
+2026-03-19 00:20:27.624 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PaymentMismatchTaskHandler to PaymentOrderMismatchEvent
+2026-03-19 00:20:27.626 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed ProductCreatedNewsletterHandler to ProductCreatedEvent
+2026-03-19 00:20:27.628 +02:00 [INF] [LeveLEO.Infrastructure.Events.InMemoryEventBus] Subscribed PromotionCreatedNewsletterHandler to PromotionCreatedEvent
+2026-03-19 00:20:27.630 +02:00 [INF] [] ✅ Event handlers subscribed successfully
+2026-03-19 00:20:27.631 +02:00 [INF] [] 🚀 Starting LeveLEO application...
+2026-03-19 00:20:27.826 +02:00 [INF] [Microsoft.Hosting.Lifetime] Now listening on: http://localhost:5158
+2026-03-19 00:20:27.871 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application started. Press Ctrl+C to shut down.
+2026-03-19 00:20:27.875 +02:00 [INF] [Microsoft.Hosting.Lifetime] Hosting environment: Development
+2026-03-19 00:20:27.878 +02:00 [INF] [Microsoft.Hosting.Lifetime] Content root path: C:\Alla\CHNU_DYPLOMA\BACKEND\LeveLEO
+2026-03-19 00:20:42.846 +02:00 [INF] [Microsoft.Hosting.Lifetime] Application is shutting down...
+2026-03-19 01:56:56.500 +02:00 [INF] [] ✅ Serilog configured successfully
+2026-03-19 11:22:44.718 +02:00 [INF] [] ✅ Serilog configured successfully

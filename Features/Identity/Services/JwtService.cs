@@ -117,39 +117,39 @@ public class JwtService(JwtSettings jwtSettings) : IJwtService
         return (userId, code, method);
     }
 
-    public string ValidateRefreshToken(string refreshToken)
-    {
-        try
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
-            var principal = tokenHandler.ValidateToken(refreshToken, new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidIssuer = _jwtSettings.Issuer,
-                ValidateAudience = true,
-                ValidAudience = _jwtSettings.Audience,
-                ValidateLifetime = true, 
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuerSigningKey = true,
-                ClockSkew = TimeSpan.Zero
-            }, out var validatedToken);
+    //public string ValidateRefreshToken(string refreshToken)
+    //{
+    //    try
+    //    {
+    //        var tokenHandler = new JwtSecurityTokenHandler();
+    //        var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
+    //        var principal = tokenHandler.ValidateToken(refreshToken, new TokenValidationParameters
+    //        {
+    //            ValidateIssuer = true,
+    //            ValidIssuer = _jwtSettings.Issuer,
+    //            ValidateAudience = true,
+    //            ValidAudience = _jwtSettings.Audience,
+    //            ValidateLifetime = true,
+    //            IssuerSigningKey = new SymmetricSecurityKey(key),
+    //            ValidateIssuerSigningKey = true,
+    //            ClockSkew = TimeSpan.Zero
+    //        }, out var validatedToken);
 
-            var userId = principal.FindFirst("userId")?.Value;
-            if (string.IsNullOrEmpty(userId))
-                throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid", 401);
+    //        var userId = principal.FindFirst("userId")?.Value;
+    //        if (string.IsNullOrEmpty(userId))
+    //            throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid", 401);
 
-            return userId;
-        }
-        catch (SecurityTokenExpiredException)
-        {
-            throw new ApiException("REFRESH_TOKEN_EXPIRED", "Refresh token has expired", 401);
-        }
-        catch
-        {
-            throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid", 401);
-        }
-    }
+    //        return userId;
+    //    }
+    //    catch (SecurityTokenExpiredException)
+    //    {
+    //        throw new ApiException("REFRESH_TOKEN_EXPIRED", "Refresh token has expired", 401);
+    //    }
+    //    catch
+    //    {
+    //        throw new ApiException("INVALID_REFRESH_TOKEN", "Refresh token is invalid", 401);
+    //    }
+    //}
 
     public string GenerateTemporaryToken(ApplicationUser user, int expiresMinutes = 2)
     {

@@ -22,7 +22,7 @@ public interface IAuthService
     Task LogoutAsync(string? refreshToken);
 
     // ===== РЕФРЕШ ТOKEN =====
-    Task<AuthResponseDto> RefreshAccessTokenAsync(string refreshToken);
+    Task<(AuthResponseDto? authResponse, string? RefreshToken, DateTimeOffset expiresAt)> RefreshAccessTokenAsync(string refreshToken);
 
     // ===== 2FA =====
     Task<InitiateTwoFactorResponseDto> InitiateTwoFactorAsync(InitiateTwoFactorRequestDto request, ClaimsPrincipal user);
