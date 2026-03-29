@@ -5,7 +5,7 @@ namespace LeveLEO.Features.Identity.Services;
 
 public interface IJwtService
 {
-    string GenerateAccessToken(ApplicationUser user);
+    string GenerateAccessToken(ApplicationUser user, IList<string> roles);
 
     string GenerateRefreshToken();
 

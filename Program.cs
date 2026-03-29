@@ -4,6 +4,7 @@ using LeveLEO.Features.AdminTasks.Services;
 using LeveLEO.Features.AttributeGroups.Services;
 using LeveLEO.Features.Brands.Services;
 using LeveLEO.Features.Categories.Services;
+using LeveLEO.Features.ContactForms.Services;
 using LeveLEO.Features.Identity.Models;
 using LeveLEO.Features.Identity.Services;
 using LeveLEO.Features.Inventory.Services;
@@ -202,6 +203,7 @@ builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 builder.Services.AddScoped<IAdminTaskService, AdminTaskService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
+builder.Services.AddScoped<IContactFormService, ContactFormService>();
 
 // =====================================================
 // INFRASTRUCTURE SERVICES
@@ -232,6 +234,9 @@ builder.Services.AddScoped<ReviewRejectedEmailHandler>();
 builder.Services.AddScoped<ReviewCreatedTaskHandler>();
 builder.Services.AddScoped<OrderPaidTaskHandler>();
 builder.Services.AddScoped<PaymentMismatchTaskHandler>();
+// Contact Form Email Handlers
+builder.Services.AddScoped<ContactFormReceivedEmailHandler>();
+builder.Services.AddScoped<ContactFormResolvedEmailHandler>();
 // Newsletter Event Handlers
 builder.Services.AddScoped<ProductCreatedNewsletterHandler>();
 builder.Services.AddScoped<PromotionCreatedNewsletterHandler>();
@@ -263,7 +268,7 @@ var app = builder.Build();
 // =====================================================
 if (app.Environment.IsDevelopment())
 {
-    // await DatabaseSeeder.SeedAsync(app);
+    //await DatabaseSeeder.SeedAsync(app);
 }
 
 // =====================================================
@@ -322,6 +327,9 @@ eventBus.Subscribe<ReviewRejectedEvent, ReviewRejectedEmailHandler>();
 eventBus.Subscribe<ReviewCreatedEvent, ReviewCreatedTaskHandler>();
 eventBus.Subscribe<OrderPaidEvent, OrderPaidTaskHandler>();
 eventBus.Subscribe<PaymentOrderMismatchEvent, PaymentMismatchTaskHandler>();
+// Contact Form events
+eventBus.Subscribe<ContactFormReceivedEvent, ContactFormReceivedEmailHandler>();
+eventBus.Subscribe<ContactFormResolvedEvent, ContactFormResolvedEmailHandler>();
 // Newsletter events
 eventBus.Subscribe<ProductCreatedEvent, ProductCreatedNewsletterHandler>();
 eventBus.Subscribe<PromotionCreatedEvent, PromotionCreatedNewsletterHandler>();

@@ -1,4 +1,4 @@
-﻿using LeveLEO.Data;
+using LeveLEO.Data;
 using LeveLEO.Features.Identity;
 using LeveLEO.Features.Identity.DTO;
 using LeveLEO.Features.Identity.Enums;
@@ -110,7 +110,8 @@ public class AuthService(
             return (new AuthResponseDto { Status = "2FA_REQUIRED", Method = method.ToString(), TwoFaToken = twoFaTokenWithCode }, null);
         }
 
-        var accessToken = jwtService.GenerateAccessToken(user);
+        var userRoles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtService.GenerateAccessToken(user, userRoles);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUserDto = await BuildAuthUserDto(user);
 
@@ -160,7 +161,8 @@ public class AuthService(
         if (!isValid)
             throw new ApiException("INVALID_2FA_CODE", "The provided 2FA code is invalid", 400);
 
-        var accessToken = jwtService.GenerateAccessToken(user);
+        var userRoles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtService.GenerateAccessToken(user, userRoles);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUser = await BuildAuthUserDto(user);
 
@@ -219,7 +221,8 @@ public class AuthService(
         dbContext.RefreshTokens.Add(newRefreshTokenEntity);
         await dbContext.SaveChangesAsync();
 
-        var accessToken = jwtService.GenerateAccessToken(user);
+        var userRoles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtService.GenerateAccessToken(user, userRoles);
         var authUser = await BuildAuthUserDto(user);
 
         return (new AuthResponseDto { User = authUser, AccessToken = accessToken }, newRefreshToken, storedToken.ExpiresAt);
@@ -428,7 +431,8 @@ public class AuthService(
         user.BackupCodes = string.Join(',', codes);
         await userManager.UpdateAsync(user);
 
-        var accessToken = jwtService.GenerateAccessToken(user);
+        var userRoles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtService.GenerateAccessToken(user, userRoles);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUser = await BuildAuthUserDto(user);
 
@@ -525,7 +529,8 @@ public class AuthService(
         if (!await userManager.IsEmailConfirmedAsync(user))
             throw new ApiException("EMAIL_NOT_CONFIRMED", "Email is not confirmed", 403);
 
-        var accessToken = jwtService.GenerateAccessToken(user);
+        var userRoles = await userManager.GetRolesAsync(user);
+        var accessToken = jwtService.GenerateAccessToken(user, userRoles);
         var refreshToken = jwtService.GenerateRefreshToken();
         var authUserDto = await BuildAuthUserDto(user);
 

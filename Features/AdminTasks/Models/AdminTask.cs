@@ -61,6 +61,12 @@ public class AdminTask
     /// Коментар адміна при виконанні
     /// </summary>
     public string? CompletionNote { get; set; }
+
+    /// <summary>
+    /// Email заявника (для форм зворотного зв'язку — щоб надіслати відповідь)
+    /// </summary>
+    [MaxLength(255)]
+    public string? RequesterEmail { get; set; }
 }
 
 public enum AdminTaskType
@@ -89,6 +95,11 @@ public enum AdminTaskType
     /// Поповнити товар
     /// </summary>
     RestockProduct = 5,
+
+    /// <summary>
+    /// Обробити форму зворотного зв'язку
+    /// </summary>
+    HandleContactForm = 6,
 
     /// <summary>
     /// Інше

@@ -2,6 +2,8 @@ using LeveLEO.Data;
 using LeveLEO.Features.AdminTasks.DTO;
 using LeveLEO.Features.AdminTasks.Models;
 using LeveLEO.Features.Products.DTO;
+using LeveLEO.Infrastructure.Events;
+using LeveLEO.Infrastructure.Events.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeveLEO.Features.AdminTasks.Services;
@@ -9,14 +11,19 @@ namespace LeveLEO.Features.AdminTasks.Services;
 public interface IAdminTaskService
 {
     Task<AdminTaskResponseDto> CreateTaskAsync(AdminTask task);
+
     Task<PagedResultDto<AdminTaskResponseDto>> GetTasksAsync(AdminTaskFilterDto filter);
+
     Task<AdminTaskResponseDto> GetTaskByIdAsync(Guid taskId);
+
     Task<AdminTaskResponseDto> AssignTaskAsync(Guid taskId, string userId);
+
     Task<AdminTaskResponseDto> CompleteTaskAsync(Guid taskId, string userId, CompleteTaskDto dto);
+
     Task<AdminTaskResponseDto> CancelTaskAsync(Guid taskId);
 }
 
-public class AdminTaskService(AppDbContext db) : IAdminTaskService
+public class AdminTaskService(AppDbContext db, IEventBus eventBus) : IAdminTaskService
 {
     public async Task<AdminTaskResponseDto> CreateTaskAsync(AdminTask task)
     {
@@ -95,6 +102,19 @@ public class AdminTaskService(AppDbContext db) : IAdminTaskService
             task.AssignedTo = userId;
 
         await db.SaveChangesAsync();
+
+        // Якщо таска містить email заявника і є коментар — надіслати лист із відповіддю
+        if (!string.IsNullOrEmpty(task.RequesterEmail) && !string.IsNullOrEmpty(task.CompletionNote))
+        {
+            await eventBus.PublishAsync(new ContactFormResolvedEvent
+            {
+                RequesterEmail = task.RequesterEmail,
+                TaskTitle = task.Title,
+                AdminNote = task.CompletionNote,
+                ResolvedAt = task.CompletedAt!.Value
+            });
+        }
+
         return MapToDto(task);
     }
 
@@ -127,7 +147,8 @@ public class AdminTaskService(AppDbContext db) : IAdminTaskService
             AssignedTo = task.AssignedTo,
             CreatedAt = task.CreatedAt,
             CompletedAt = task.CompletedAt,
-            CompletionNote = task.CompletionNote
+            CompletionNote = task.CompletionNote,
+            RequesterEmail = task.RequesterEmail
         };
     }
 }

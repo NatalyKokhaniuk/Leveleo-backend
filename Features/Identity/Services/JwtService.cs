@@ -13,7 +13,7 @@ public class JwtService(JwtSettings jwtSettings) : IJwtService
 {
     private readonly JwtSettings _jwtSettings = jwtSettings ?? throw new ArgumentNullException(nameof(jwtSettings));
 
-    public string GenerateAccessToken(ApplicationUser user)
+    public string GenerateAccessToken(ApplicationUser user, IList<string> roles)
     {
         var claims = new List<Claim>
 {
@@ -24,6 +24,9 @@ public class JwtService(JwtSettings jwtSettings) : IJwtService
     new Claim("lastName", user.LastName ?? ""),
     new Claim("language", user.Language ?? "uk")
 };
+
+        foreach (var role in roles)
+            claims.Add(new Claim(ClaimTypes.Role, role));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -20,6 +20,7 @@ public class AdminTaskResponseDto
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
     public string? CompletionNote { get; set; }
+    public string? RequesterEmail { get; set; }
 }
 
 public class CompleteTaskDto

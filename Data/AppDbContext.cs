@@ -1,4 +1,5 @@
 ﻿using LeveLEO.Features.AdminTasks.Models;
+using LeveLEO.Features.ContactForms.Models;
 using LeveLEO.Features.AttributeGroups.Models;
 using LeveLEO.Features.Brands.Models;
 using LeveLEO.Features.Categories.Models;
@@ -38,6 +39,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<OrderItemReviewVideo> OrderItemReviewVideos => Set<OrderItemReviewVideo>();
 
     public DbSet<AdminTask> AdminTasks => Set<AdminTask>();
+    public DbSet<ContactForm> ContactForms => Set<ContactForm>();
 
     public DbSet<Product> Products => Set<Product>();
     public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();

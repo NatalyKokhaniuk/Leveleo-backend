@@ -2,10 +2,27 @@ using LeveLEO.Data;
 using LeveLEO.Features.AdminTasks.DTO;
 using LeveLEO.Features.AdminTasks.Models;
 using LeveLEO.Features.AdminTasks.Services;
+using LeveLEO.Infrastructure.Events;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace LeveLEO.Tests.Features.AdminTasks;
+
+/// <summary>
+/// Мінімальна заглушка IEventBus для тестів — нічого не робить
+/// </summary>
+public class NoOpEventBus : IEventBus
+{
+    public Task PublishAsync<TEvent>(TEvent @event) where TEvent : IEvent
+        => Task.CompletedTask;
+
+    public void Subscribe<TEvent, THandler>()
+        where TEvent : IEvent
+        where THandler : IEventHandler<TEvent>
+    {
+        // no-op
+    }
+}
 
 public class AdminTaskServiceTests : IDisposable
 {
@@ -19,7 +36,7 @@ public class AdminTaskServiceTests : IDisposable
             .Options;
 
         _context = new AppDbContext(options);
-        _service = new AdminTaskService(_context);
+        _service = new AdminTaskService(_context, new NoOpEventBus());
     }
 
     [Fact]
