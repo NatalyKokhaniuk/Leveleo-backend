@@ -11,4 +11,5 @@ public class UpdateCategoryDto
     public Optional<Guid?> ParentId { get; set; }
 
     public Optional<bool> IsActive { get; set; }
+    public Optional<string?> ImageKey { get; set; }
 }

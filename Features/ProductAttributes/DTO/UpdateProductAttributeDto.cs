@@ -6,6 +6,7 @@ namespace LeveLEO.Features.ProductAttributes.DTO;
 public class UpdateProductAttributeDto
 {
     public Optional<string> Name { get; set; } = default;
+    public Optional<Guid> AttributeGroupId { get; set; } = default;
     public Optional<string?> Description { get; set; } = default;
     public Optional<AttributeType> Type { get; set; } = default;
     public Optional<string?> Unit { get; set; } = default;

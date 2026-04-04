@@ -29,7 +29,7 @@ public class NewsletterController : ControllerBase
     {
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var result = await _newsletterService.SubscribeAsync(dto, ipAddress);
-        
+
         return Ok(result);
     }
 
@@ -57,7 +57,7 @@ public class NewsletterController : ControllerBase
         }
 
         var result = await _newsletterService.UnsubscribeByTokenAsync(token);
-        
+
         var html = $@"
 <!DOCTYPE html>
 <html>
@@ -126,5 +126,16 @@ public class NewsletterController : ControllerBase
     {
         await _newsletterService.SendNewPromotionAnnouncementAsync(dto);
         return Ok(new { message = "Розсилку про нову акцію надіслано!" });
+    }
+
+    /// <summary>
+    /// Отримати список активних підписників з інформацією про акаунти (тільки для адмінів)
+    /// </summary>
+    [HttpGet("subscribers")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<IEnumerable<ActiveSubscriberDto>>> GetActiveSubscribers()
+    {
+        var subscribers = await _newsletterService.GetActiveSubscribersAsync();
+        return Ok(subscribers);
     }
 }

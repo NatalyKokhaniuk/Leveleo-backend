@@ -5,6 +5,7 @@ namespace LeveLEO.Features.ProductAttributes.DTO;
 public class ProductAttributeResponseDto
 {
     public Guid Id { get; set; }
+    public Guid AttributeGroupId { get; set; }
 
     public string Name { get; set; } = null!;
 

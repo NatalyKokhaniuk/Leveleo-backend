@@ -11,6 +11,7 @@ public class CategoryResponseDto
     public string Slug { get; set; } = null!;
     public Guid? ParentId { get; set; }
     public bool IsActive { get; set; }
+    public string? ImageKey { get; set; }
     public string FullPath { get; set; } = string.Empty;
     public List<CategoryTranslationResponseDto> Translations { get; set; } = [];
 }

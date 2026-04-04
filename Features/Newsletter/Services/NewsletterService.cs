@@ -1,7 +1,9 @@
 using LeveLEO.Data;
+using LeveLEO.Features.Identity.Models;
 using LeveLEO.Features.Newsletter.DTO;
 using LeveLEO.Features.Newsletter.Models;
 using LeveLEO.Infrastructure.Email;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,23 +11,48 @@ using System.Security.Cryptography;
 
 namespace LeveLEO.Features.Newsletter.Services;
 
-public class NewsletterService : INewsletterService
+public class NewsletterService(
+    AppDbContext db,
+    IEmailSender emailSender,
+    IEmailTemplateService templateService,
+    ILogger<NewsletterService> logger,
+    UserManager<ApplicationUser> userManager
+        ) : INewsletterService
 {
-    private readonly AppDbContext _db;
-    private readonly IEmailSender _emailSender;
-    private readonly IEmailTemplateService _templateService;
-    private readonly ILogger<NewsletterService> _logger;
-
-    public NewsletterService(
-        AppDbContext db,
-        IEmailSender emailSender,
-        IEmailTemplateService templateService,
-        ILogger<NewsletterService> logger)
+    public async Task<IEnumerable<ActiveSubscriberDto>> GetActiveSubscribersAsync()
     {
-        _db = db;
-        _emailSender = emailSender;
-        _templateService = templateService;
-        _logger = logger;
+        var subscribers = await db.NewsletterSubscribers
+            .Where(s => s.IsActive)
+            .OrderByDescending(s => s.SubscribedAt)
+            .ToListAsync();
+
+        if (subscribers.Count == 0)
+            return [];
+
+        var emails = subscribers.Select(s => s.Email).ToHashSet();
+        var accountsByEmail = await userManager.Users
+            .Where(u => emails.Contains(u.Email!))
+            .Select(u => new { u.Email, u.FirstName, u.LastName })
+            .ToDictionaryAsync(u => u.Email!, StringComparer.OrdinalIgnoreCase);
+
+        return subscribers.Select(s =>
+        {
+            accountsByEmail.TryGetValue(s.Email, out var account);
+
+            var fullName = account is not null
+                ? $"{account.FirstName} {account.LastName}".Trim()
+                : null;
+
+            return new ActiveSubscriberDto
+            {
+                Id = s.Id,
+                Email = s.Email,
+                SubscribedAt = s.SubscribedAt,
+                Source = s.Source,
+                HasAccount = account is not null,
+                FullName = string.IsNullOrEmpty(fullName) ? null : fullName
+            };
+        });
     }
 
     public async Task<NewsletterSubscriptionResponseDto> SubscribeAsync(SubscribeNewsletterDto dto, string? ipAddress)
@@ -33,7 +60,7 @@ public class NewsletterService : INewsletterService
         var email = dto.Email.ToLowerInvariant().Trim();
 
         // Перевірити чи вже підписаний
-        var existing = await _db.NewsletterSubscribers
+        var existing = await db.NewsletterSubscribers
             .FirstOrDefaultAsync(s => s.Email == email);
 
         if (existing != null)
@@ -53,7 +80,7 @@ public class NewsletterService : INewsletterService
                 existing.SubscribedAt = DateTimeOffset.UtcNow;
                 existing.UnsubscribedAt = null;
                 existing.UnsubscribeToken = GenerateUnsubscribeToken();
-                await _db.SaveChangesAsync();
+                await db.SaveChangesAsync();
 
                 await SendWelcomeEmailAsync(existing);
 
@@ -75,13 +102,13 @@ public class NewsletterService : INewsletterService
             Source = dto.Source
         };
 
-        _db.NewsletterSubscribers.Add(subscriber);
-        await _db.SaveChangesAsync();
+        db.NewsletterSubscribers.Add(subscriber);
+        await db.SaveChangesAsync();
 
         // Відправити welcome email
         await SendWelcomeEmailAsync(subscriber);
 
-        _logger.LogInformation("New newsletter subscriber: {Email}", email);
+        logger.LogInformation("New newsletter subscriber: {Email}", email);
 
         return new NewsletterSubscriptionResponseDto
         {
@@ -94,7 +121,7 @@ public class NewsletterService : INewsletterService
     {
         var email = dto.Email.ToLowerInvariant().Trim();
 
-        var subscriber = await _db.NewsletterSubscribers
+        var subscriber = await db.NewsletterSubscribers
             .FirstOrDefaultAsync(s => s.Email == email && s.UnsubscribeToken == dto.UnsubscribeToken);
 
         if (subscriber == null)
@@ -108,9 +135,9 @@ public class NewsletterService : INewsletterService
 
         subscriber.IsActive = false;
         subscriber.UnsubscribedAt = DateTimeOffset.UtcNow;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
-        _logger.LogInformation("Newsletter unsubscribe: {Email}", email);
+        logger.LogInformation("Newsletter unsubscribe: {Email}", email);
 
         return new NewsletterSubscriptionResponseDto
         {
@@ -121,7 +148,7 @@ public class NewsletterService : INewsletterService
 
     public async Task<NewsletterSubscriptionResponseDto> UnsubscribeByTokenAsync(string token)
     {
-        var subscriber = await _db.NewsletterSubscribers
+        var subscriber = await db.NewsletterSubscribers
             .FirstOrDefaultAsync(s => s.UnsubscribeToken == token && s.IsActive);
 
         if (subscriber == null)
@@ -135,9 +162,9 @@ public class NewsletterService : INewsletterService
 
         subscriber.IsActive = false;
         subscriber.UnsubscribedAt = DateTimeOffset.UtcNow;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
-        _logger.LogInformation("Newsletter unsubscribe by token: {Email}", subscriber.Email);
+        logger.LogInformation("Newsletter unsubscribe by token: {Email}", subscriber.Email);
 
         return new NewsletterSubscriptionResponseDto
         {
@@ -149,23 +176,23 @@ public class NewsletterService : INewsletterService
     public async Task<bool> IsSubscribedAsync(string email)
     {
         var normalized = email.ToLowerInvariant().Trim();
-        return await _db.NewsletterSubscribers
+        return await db.NewsletterSubscribers
             .AnyAsync(s => s.Email == normalized && s.IsActive);
     }
 
     public async Task SendNewProductAnnouncementAsync(NewProductAnnouncementDto product)
     {
-        var subscribers = await _db.NewsletterSubscribers
+        var subscribers = await db.NewsletterSubscribers
             .Where(s => s.IsActive)
             .ToListAsync();
 
         if (subscribers.Count == 0)
         {
-            _logger.LogWarning("No active newsletter subscribers for new product announcement");
+            logger.LogWarning("No active newsletter subscribers for new product announcement");
             return;
         }
 
-        _logger.LogInformation("Sending new product announcement to {Count} subscribers", subscribers.Count);
+        logger.LogInformation("Sending new product announcement to {Count} subscribers", subscribers.Count);
 
         foreach (var subscriber in subscribers)
         {
@@ -175,24 +202,24 @@ public class NewsletterService : INewsletterService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send new product email to {Email}", subscriber.Email);
+                logger.LogError(ex, "Failed to send new product email to {Email}", subscriber.Email);
             }
         }
     }
 
     public async Task SendNewPromotionAnnouncementAsync(NewPromotionAnnouncementDto promotion)
     {
-        var subscribers = await _db.NewsletterSubscribers
+        var subscribers = await db.NewsletterSubscribers
             .Where(s => s.IsActive)
             .ToListAsync();
 
         if (subscribers.Count == 0)
         {
-            _logger.LogWarning("No active newsletter subscribers for new promotion announcement");
+            logger.LogWarning("No active newsletter subscribers for new promotion announcement");
             return;
         }
 
-        _logger.LogInformation("Sending new promotion announcement to {Count} subscribers", subscribers.Count);
+        logger.LogInformation("Sending new promotion announcement to {Count} subscribers", subscribers.Count);
 
         foreach (var subscriber in subscribers)
         {
@@ -202,14 +229,14 @@ public class NewsletterService : INewsletterService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send new promotion email to {Email}", subscriber.Email);
+                logger.LogError(ex, "Failed to send new promotion email to {Email}", subscriber.Email);
             }
         }
     }
 
     public async Task<int> GetActiveSubscribersCountAsync()
     {
-        return await _db.NewsletterSubscribers.CountAsync(s => s.IsActive);
+        return await db.NewsletterSubscribers.CountAsync(s => s.IsActive);
     }
 
     #region Private Helper Methods
@@ -233,9 +260,9 @@ public class NewsletterService : INewsletterService
             { "{{UNSUBSCRIBE_LINK}}", unsubscribeLink }
         };
 
-        var body = await _templateService.GetTemplateAsync("NewsletterWelcome", replacements);
+        var body = await templateService.GetTemplateAsync("NewsletterWelcome", replacements);
 
-        await _emailSender.SendEmailAsync(subscriber.Email, subject, body);
+        await emailSender.SendEmailAsync(subscriber.Email, subject, body);
     }
 
     private async Task SendNewProductEmailAsync(NewsletterSubscriber subscriber, NewProductAnnouncementDto product)
@@ -255,9 +282,9 @@ public class NewsletterService : INewsletterService
             { "{{UNSUBSCRIBE_LINK}}", unsubscribeLink }
         };
 
-        var body = await _templateService.GetTemplateAsync("NewsletterNewProduct", replacements);
+        var body = await templateService.GetTemplateAsync("NewsletterNewProduct", replacements);
 
-        await _emailSender.SendEmailAsync(subscriber.Email, subject, body);
+        await emailSender.SendEmailAsync(subscriber.Email, subject, body);
     }
 
     private async Task SendNewPromotionEmailAsync(NewsletterSubscriber subscriber, NewPromotionAnnouncementDto promotion)
@@ -268,12 +295,12 @@ public class NewsletterService : INewsletterService
         var unsubscribeLink = $"https://leveleo.com/newsletter/unsubscribe?token={subscriber.UnsubscribeToken}";
 
         // Форматувати знижку в залежності від типу
-        var discountDisplay = promotion.DiscountType == "Percentage" 
-            ? $"{promotion.DiscountValue}%" 
+        var discountDisplay = promotion.DiscountType == "Percentage"
+            ? $"{promotion.DiscountValue}%"
             : $"{promotion.DiscountValue:C}";
 
-        var discountLabel = promotion.DiscountType == "Percentage" 
-            ? "Знижка до:" 
+        var discountLabel = promotion.DiscountType == "Percentage"
+            ? "Знижка до:"
             : "Знижка:";
 
         // Додати інформацію про купон якщо є
@@ -293,10 +320,10 @@ public class NewsletterService : INewsletterService
             { "{{UNSUBSCRIBE_LINK}}", unsubscribeLink }
         };
 
-        var body = await _templateService.GetTemplateAsync("NewsletterNewPromotion", replacements);
+        var body = await templateService.GetTemplateAsync("NewsletterNewPromotion", replacements);
 
-        await _emailSender.SendEmailAsync(subscriber.Email, subject, body);
+        await emailSender.SendEmailAsync(subscriber.Email, subject, body);
     }
 
-    #endregion
+    #endregion Private Helper Methods
 }

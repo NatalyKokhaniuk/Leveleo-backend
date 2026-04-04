@@ -38,4 +38,10 @@ public interface INewsletterService
     /// Отримати кількість активних підписників
     /// </summary>
     Task<int> GetActiveSubscribersCountAsync();
+
+    /// <summary>
+    /// Отримати активних підписників
+    /// </summary>
+
+    Task<IEnumerable<ActiveSubscriberDto>> GetActiveSubscribersAsync();
 }

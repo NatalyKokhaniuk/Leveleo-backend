@@ -21,6 +21,7 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
             Description = dto.Description,
             ParentId = dto.ParentId,
             IsActive = dto.IsActive,
+            ImageKey = dto.ImageKey,
             Translations = dto.Translations?.Select(t => new CategoryTranslation
             {
                 LanguageCode = t.LanguageCode,
@@ -70,6 +71,10 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
         if (dto.IsActive.HasValue)
         {
             category.IsActive = dto.IsActive.Value;
+        }
+        if (dto.ImageKey.HasValue)
+        {
+            category.ImageKey = dto.ImageKey.Value;
         }
 
         await db.SaveChangesAsync();
@@ -373,6 +378,7 @@ public class CategoryService(AppDbContext db, ISlugGenerator slugGenerator) : IC
             Description = category.Description,
             ParentId = category.ParentId,
             IsActive = category.IsActive,
+            ImageKey = category.ImageKey,
             FullPath = paths.GetValueOrDefault(category.Id) ?? category.Name,
             Translations = [.. category.Translations.Select(t => new CategoryTranslationResponseDto
             {

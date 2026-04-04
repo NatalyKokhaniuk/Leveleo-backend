@@ -21,6 +21,7 @@ public class ProductAttributeService(AppDbContext db, ISlugGenerator slugGenerat
 
         var entity = new ProductAttribute
         {
+            AttributeGroupId = dto.AttributeGroupId,
             Name = dto.Name,
             Slug = slug,
             Description = dto.Description,
@@ -47,6 +48,15 @@ public class ProductAttributeService(AppDbContext db, ISlugGenerator slugGenerat
             .Include(a => a.Translations)
             .FirstOrDefaultAsync(a => a.Id == attributeId && !a.IsDeleted)
             ?? throw new ApiException("ATTRIBUTE_NOT_FOUND", $"Attribute with Id '{attributeId}' not found.", 404);
+
+        //Attribute Group
+        if (dto.AttributeGroupId.HasValue && dto.AttributeGroupId.Value != attr.AttributeGroupId)
+        {
+            var groupExists = await _db.AttributeGroups.AnyAsync(g => g.Id == dto.AttributeGroupId.Value);
+            if (!groupExists)
+                throw new ApiException("ATTRIBUTE_GROUP_NOT_FOUND", $"Attribute group with Id '{dto.AttributeGroupId.Value}' not found.", 404);
+            attr.AttributeGroupId = dto.AttributeGroupId.Value;
+        }
 
         // Name
         if (dto.Name.HasValue && dto.Name.Value != attr.Name)
@@ -290,6 +300,7 @@ public class ProductAttributeService(AppDbContext db, ISlugGenerator slugGenerat
     private static ProductAttributeResponseDto MapToDto(ProductAttribute attr) => new()
     {
         Id = attr.Id,
+        AttributeGroupId = attr.AttributeGroupId,
         Name = attr.Name,
         Slug = attr.Slug,
         Description = attr.Description,
