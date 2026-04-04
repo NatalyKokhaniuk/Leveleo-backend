@@ -124,24 +124,35 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
 
     public async Task DeleteAsync(Guid productId)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
 
-        var product = await _db.Products
-            .Include(p => p.Images)
-            .Include(p => p.Videos)
-            .FirstOrDefaultAsync(p => p.Id == productId)
-            ?? throw new ApiException("PRODUCT_NOT_FOUND", $"Product with Id '{productId}' not found.", 404);
+        List<string> imageKeys = [];
+        List<string> videoKeys = [];
 
-        _db.Products.Remove(product);
-        await _db.SaveChangesAsync();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync();
 
-        await transaction.CommitAsync();
+            var product = await _db.Products
+                .Include(p => p.Images)
+                .Include(p => p.Videos)
+                .FirstOrDefaultAsync(p => p.Id == productId)
+                ?? throw new ApiException("PRODUCT_NOT_FOUND", $"Product with Id '{productId}' not found.", 404);
 
-        foreach (var img in product.Images)
-            await _mediaService.DeleteFileAsync(img.ImageKey);
+            imageKeys = product.Images.Select(i => i.ImageKey).ToList();
+            videoKeys = product.Videos.Select(v => v.VideoKey).ToList();
 
-        foreach (var vid in product.Videos)
-            await _mediaService.DeleteFileAsync(vid.VideoKey);
+            _db.Products.Remove(product);
+            await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        });
+
+        foreach (var key in imageKeys)
+            await _mediaService.DeleteFileAsync(key);
+
+        foreach (var key in videoKeys)
+            await _mediaService.DeleteFileAsync(key);
     }
 
     public async Task<ProductResponseDto> GetByIdAsync(Guid productId)
@@ -441,7 +452,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
     : 0m,
 
                 TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
-                RatingCount = p.OrderItems 
+                RatingCount = p.OrderItems
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
             })
             .ToListAsync();
@@ -558,7 +569,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 var productIds = new List<Guid>();
 
                 // Якщо задані конкретні продукти
-                
+
                 if (promotion.ProductConditions?.ProductIds.HasValue == true &&
                     promotion.ProductConditions.ProductIds.Value != null)
                 {
