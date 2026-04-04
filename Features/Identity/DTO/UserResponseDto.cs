@@ -12,8 +12,10 @@ public class UserResponseDto
     public string? AvatarUrl { get; set; }
     public string? PhoneNumber { get; set; }
     public string[] Roles { get; set; } = null!;
+    public bool IsActive { get; set; }
 
     // 2FA
     public bool TwoFactorEnabled { get; set; }
+
     public TwoFactorMethod? TwoFactorMethod { get; set; } // Email, SMS, TOTP, null
 }

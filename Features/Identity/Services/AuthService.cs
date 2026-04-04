@@ -332,7 +332,8 @@ public class AuthService(
             PhoneNumber = user.PhoneNumber,
             Roles = [.. roles],
             TwoFactorEnabled = user.TwoFactorEnabled,
-            TwoFactorMethod = user.TwoFactorMethod
+            TwoFactorMethod = user.TwoFactorMethod,
+            IsActive = user.IsActive
         };
     }
 
