@@ -96,7 +96,7 @@ public class AuthService(
 
             if (method == TwoFactorMethod.Totp)
             {
-                var twoFaToken = jwtService.GenerateTwoFactorToken(user.Id);
+                var twoFaToken = jwtService.GenerateTwoFactorToken(user.Id, null, TwoFactorMethod.Totp);
                 return (new AuthResponseDto { Status = "2FA_REQUIRED", Method = "TOTP", TwoFaToken = twoFaToken }, null);
             }
 
@@ -106,7 +106,7 @@ public class AuthService(
             else if (method == TwoFactorMethod.Sms)
                 await smsSender.SendSmsAsync(user.PhoneNumber!, $"Ваш код: {code}");
 
-            var twoFaTokenWithCode = jwtService.GenerateTwoFactorToken(user.Id, code);
+            var twoFaTokenWithCode = jwtService.GenerateTwoFactorToken(user.Id, code, method);
             return (new AuthResponseDto { Status = "2FA_REQUIRED", Method = method.ToString(), TwoFaToken = twoFaTokenWithCode }, null);
         }
 
@@ -146,20 +146,33 @@ public class AuthService(
 
     public async Task<(AuthResponseDto? authResponse, string? RefreshToken)> VerifyTwoFactorAndGetTokensAsync(TwoFactorVerifyRequestDto request)
     {
-        var userId = jwtService.ValidateTwoFactorToken(request.TwoFaToken);
-        var user = await userManager.FindByIdAsync(userId) ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
+        // Читаємо claims з токена (userId, code, method) — як в ConfirmTwoFactorSetupAsync
+        var claims = jwtService.GetTwoFactorTokenClaims(request.TwoFaToken);
+        var userId = claims.userId ?? throw new ApiException("INVALID_2FA_TOKEN", "Invalid temporary token", 400);
 
-        var provider = user.TwoFactorMethod switch
+        var user = await userManager.FindByIdAsync(userId)
+                   ?? throw new ApiException("USER_NOT_FOUND", "User not found", 404);
+
+        var method = claims.method?.ToUpperInvariant() switch
         {
-            TwoFactorMethod.Email => TokenOptions.DefaultEmailProvider,
-            TwoFactorMethod.Sms => TokenOptions.DefaultPhoneProvider,
-            TwoFactorMethod.Totp => TokenOptions.DefaultAuthenticatorProvider,
+            "EMAIL" => TwoFactorMethod.Email,
+            "SMS" => TwoFactorMethod.Sms,
+            "TOTP" => TwoFactorMethod.Totp,
             _ => throw new ApiException("INVALID_2FA_METHOD", "Invalid 2FA method", 400)
         };
 
-        var isValid = await userManager.VerifyTwoFactorTokenAsync(user, provider, request.Code);
-        if (!isValid)
-            throw new ApiException("INVALID_2FA_CODE", "The provided 2FA code is invalid", 400);
+        if (method == TwoFactorMethod.Email || method == TwoFactorMethod.Sms)
+        {
+            if (claims.code != request.Code)
+                throw new ApiException("INVALID_2FA_CODE", "The provided 2FA code is invalid", 400);
+        }
+        else if (method == TwoFactorMethod.Totp)
+        {
+            if (string.IsNullOrEmpty(user.TotpSecret))
+                throw new ApiException("TOTP_NOT_INITIALIZED", "TOTP not initialized", 400);
+            if (!VerifyTotp(user.TotpSecret, request.Code))
+                throw new ApiException("INVALID_TOTP_CODE", "Invalid TOTP code", 400);
+        }
 
         var userRoles = await userManager.GetRolesAsync(user);
         var accessToken = jwtService.GenerateAccessToken(user, userRoles);
@@ -261,7 +274,7 @@ public class AuthService(
                 throw new ApiException("INVALID_2FA_METHOD", "Invalid 2FA method", 400);
         }
 
-        var tempToken = jwtService.GenerateTwoFactorToken(userId, code);
+        var tempToken = jwtService.GenerateTwoFactorToken(userId, code, request.Method);
         return new InitiateTwoFactorResponseDto { Method = request.Method, TemporaryToken = tempToken, TotpSecret = totpSecret };
     }
 
@@ -419,8 +432,7 @@ public class AuthService(
             throw new ApiException("EMAIL_NOT_CONFIRMED", "Email is not confirmed", 403);
         if (!user.TwoFactorEnabled)
             throw new ApiException("2FA_NOT_ENABLED", "Two-factor authentication is not enabled for this user", 400);
-        if (user.TwoFactorMethod != TwoFactorMethod.Totp)
-            throw new ApiException("2FA_NOT_ENABLED", "Two-factor authentication is not enabled for this user", 400);
+
         if (string.IsNullOrEmpty(user.BackupCodes))
             throw new ApiException("NO_BACKUP_CODES", "No backup codes available", 400);
 
