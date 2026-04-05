@@ -272,13 +272,35 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                     .Count(oi => oi.Review != null && oi.Review.IsApproved)
             });
 
+        /* queryWithAggregates = filter.SortBy switch
+         {
+             ProductSortBy.PriceAsc => queryWithAggregates.OrderBy(x => x.Product.Price),
+             ProductSortBy.PriceDesc => queryWithAggregates.OrderByDescending(x => x.Product.Price),
+             ProductSortBy.AverageRatingDesc => queryWithAggregates.OrderByDescending(x => x.AverageRating),
+             ProductSortBy.TotalSoldDesc => queryWithAggregates.OrderByDescending(x => x.TotalSold),
+             _ => queryWithAggregates.OrderBy(x => x.Product.Price)
+         };*/
+
         queryWithAggregates = filter.SortBy switch
         {
-            ProductSortBy.PriceAsc => queryWithAggregates.OrderBy(x => x.Product.Price),
-            ProductSortBy.PriceDesc => queryWithAggregates.OrderByDescending(x => x.Product.Price),
-            ProductSortBy.AverageRatingDesc => queryWithAggregates.OrderByDescending(x => x.AverageRating),
-            ProductSortBy.TotalSoldDesc => queryWithAggregates.OrderByDescending(x => x.TotalSold),
-            _ => queryWithAggregates.OrderBy(x => x.Product.Price)
+            ProductSortBy.PriceAsc => queryWithAggregates
+                .OrderBy(x => x.Product.Price)
+                .ThenByDescending(x => x.Product.CreatedAt),
+
+            ProductSortBy.PriceDesc => queryWithAggregates
+                .OrderByDescending(x => x.Product.Price)
+                .ThenByDescending(x => x.Product.CreatedAt),
+
+            ProductSortBy.AverageRatingDesc => queryWithAggregates
+                .OrderByDescending(x => x.AverageRating)
+                .ThenByDescending(x => x.Product.CreatedAt),
+
+            ProductSortBy.TotalSoldDesc => queryWithAggregates
+                .OrderByDescending(x => x.TotalSold)
+                .ThenByDescending(x => x.Product.CreatedAt),
+
+            _ => queryWithAggregates
+                .OrderByDescending(x => x.Product.CreatedAt)
         };
 
         var totalCount = await queryWithAggregates.CountAsync();
