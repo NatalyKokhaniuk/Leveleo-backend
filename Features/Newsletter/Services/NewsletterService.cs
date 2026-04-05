@@ -287,6 +287,26 @@ public class NewsletterService(
         await emailSender.SendEmailAsync(subscriber.Email, subject, body);
     }
 
+    public async Task<bool> AdminUnsubscribeByEmailAsync(string email)
+    {
+        var normalized = email.ToLowerInvariant().Trim();
+
+        var subscriber = await db.NewsletterSubscribers
+            .FirstOrDefaultAsync(s => s.Email == normalized && s.IsActive);
+
+        if (subscriber == null)
+            return false;
+
+        subscriber.IsActive = false;
+        subscriber.UnsubscribedAt = DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        logger.LogInformation("Admin unsubscribed user: {Email}", email);
+
+        return true;
+    }
+
     private async Task SendNewPromotionEmailAsync(NewsletterSubscriber subscriber, NewPromotionAnnouncementDto promotion)
     {
         var subject = $"🔥 Нова акція в LeveLEO: {promotion.PromotionName}";

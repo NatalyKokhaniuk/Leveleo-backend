@@ -129,6 +129,23 @@ public class NewsletterController : ControllerBase
     }
 
     /// <summary>
+    /// Відписати користувача по email (тільки для адміна)
+    /// </summary>
+    [HttpPost("admin/unsubscribe")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminUnsubscribe([FromBody] string email)
+    {
+        var result = await _newsletterService.AdminUnsubscribeByEmailAsync(email);
+
+        if (!result)
+        {
+            return NotFound(new { message = "Активну підписку не знайдено" });
+        }
+
+        return Ok(new { message = "Користувача успішно відписано" });
+    }
+
+    /// <summary>
     /// Отримати список активних підписників з інформацією про акаунти (тільки для адмінів)
     /// </summary>
     [HttpGet("subscribers")]

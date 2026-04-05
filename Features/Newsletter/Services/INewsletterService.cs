@@ -14,6 +14,8 @@ public interface INewsletterService
     /// </summary>
     Task<NewsletterSubscriptionResponseDto> UnsubscribeAsync(UnsubscribeNewsletterDto dto);
 
+    Task<bool> AdminUnsubscribeByEmailAsync(string email);
+
     /// <summary>
     /// Відписатися по токену (з email посилання)
     /// </summary>
