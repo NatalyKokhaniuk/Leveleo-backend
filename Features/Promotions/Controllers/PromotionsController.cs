@@ -59,6 +59,14 @@ public class PromotionsController(IPromotionService service) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("")]
+    [Authorize(Roles = "Admin,Moderator")]
+    public async Task<ActionResult<List<PromotionResponseDto>>> GetAll()
+    {
+        var result = await service.GetAllAsync();
+        return Ok(result);
+    }
+
     #endregion CRUD
 
     #region TRANSLATIONS

@@ -20,6 +20,8 @@ public interface IPromotionService
 
     Task<List<PromotionResponseDto>> GetActiveAsync();
 
+    Task<List<PromotionResponseDto>> GetAllAsync();
+
     // ===== PRODUCT LEVEL =====
 
     Task<(decimal? discountedPrice, Promotion? promotion)>

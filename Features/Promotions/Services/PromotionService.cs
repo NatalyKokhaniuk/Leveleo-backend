@@ -186,6 +186,21 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
         })];
     }
 
+    public async Task<List<PromotionResponseDto>> GetAllAsync()
+    {
+        var promotions = await _db.Promotions
+        .ToListAsync();
+
+        return [.. promotions.Select(p => new PromotionResponseDto
+        {
+            Id = p.Id,
+            Slug = p.Slug,
+            StartDate = p.StartDate,
+            EndDate = p.EndDate,
+            IsActive = p.IsActive
+        })];
+    }
+
     public async Task DeleteAsync(Guid id)
     {
         var promotion = await _db.Promotions.FindAsync(id)
