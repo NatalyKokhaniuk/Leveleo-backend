@@ -15,7 +15,7 @@ public class SocialAuthService(
     IConfiguration config,
     HttpClient httpClient) : ISocialAuthService
 {
-    public async Task<ApplicationUser> LoginWithGoogleAsync(string idToken)
+    /*public async Task<ApplicationUser> LoginWithGoogleAsync(string idToken)
     {
         var email = await ValidateGoogleTokenAsync(idToken); // email з Google
         var user = await userManager.FindByEmailAsync(email);
@@ -36,6 +36,69 @@ public class SocialAuthService(
             user = new ApplicationUser { Email = email, UserName = email, EmailConfirmed = true };
             await userManager.CreateAsync(user);
         }
+        return user;
+    }*/
+
+    public async Task<ApplicationUser> LoginWithGoogleAsync(string idToken)
+    {
+        var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+
+        if (string.IsNullOrEmpty(payload.Email))
+            throw new ApiException("GOOGLE_TOKEN_INVALID", "Email not found", 400);
+
+        var user = await userManager.FindByEmailAsync(payload.Email);
+
+        if (user == null)
+        {
+            user = new ApplicationUser
+            {
+                Email = payload.Email,
+                UserName = payload.Email,
+                EmailConfirmed = true,
+                FirstName = payload.GivenName,
+                LastName = payload.FamilyName
+            };
+
+            await userManager.CreateAsync(user);
+        }
+
+        return user;
+    }
+
+    public async Task<ApplicationUser> LoginWithFacebookAsync(string accessToken)
+    {
+        var response = await httpClient.GetAsync(
+            $"https://graph.facebook.com/me?fields=email,first_name,last_name&access_token={accessToken}");
+
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync();
+        var obj = JsonSerializer.Deserialize<JsonElement>(json);
+
+        var email = obj.GetProperty("email").GetString();
+
+        if (string.IsNullOrEmpty(email))
+            throw new ApiException("FACEBOOK_TOKEN_INVALID", "Email not found", 400);
+
+        var firstName = obj.TryGetProperty("first_name", out var fn) ? fn.GetString() : null;
+        var lastName = obj.TryGetProperty("last_name", out var ln) ? ln.GetString() : null;
+
+        var user = await userManager.FindByEmailAsync(email);
+
+        if (user == null)
+        {
+            user = new ApplicationUser
+            {
+                Email = email,
+                UserName = email,
+                EmailConfirmed = true,
+                FirstName = firstName,
+                LastName = lastName
+            };
+
+            await userManager.CreateAsync(user);
+        }
+
         return user;
     }
 
