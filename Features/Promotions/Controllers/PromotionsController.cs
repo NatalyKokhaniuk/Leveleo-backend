@@ -106,7 +106,8 @@ public class PromotionsController(IPromotionService service) : ControllerBase
     public async Task<ActionResult<PromotionTranslationDto>> GetTranslationById(Guid promotionId, string languageCode)
     {
         var promotion = await service.GetByIdAsync(promotionId);
-        var translation = promotion.Translations.FirstOrDefault(t => t.LanguageCode == languageCode);
+        var normalizedLanguageCode = languageCode.Trim().ToLowerInvariant();
+        var translation = promotion.Translations.FirstOrDefault(t => t.LanguageCode.ToLowerInvariant() == normalizedLanguageCode);
         if (translation == null)
             return NotFound();
         return Ok(translation);

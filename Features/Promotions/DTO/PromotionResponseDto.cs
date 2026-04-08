@@ -1,4 +1,5 @@
 ﻿using LeveLEO.Features.Promotions.Models;
+using LeveLEO.Features.Promotions.Models.LevelConditions;
 using System.Text.Json.Serialization;
 
 namespace LeveLEO.Features.Promotions.DTO;
@@ -12,6 +13,8 @@ public class PromotionResponseDto
     public string? ImageKey { get; set; }
 
     public PromotionLevel Level { get; set; }
+    public ProductLevelCondition? ProductConditions { get; set; }
+    public CartLevelCondition? CartConditions { get; set; }
 
     public DiscountType? DiscountType { get; set; }
     public decimal? DiscountValue { get; set; }

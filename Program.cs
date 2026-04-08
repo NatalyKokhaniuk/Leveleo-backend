@@ -248,8 +248,15 @@ builder.Services.AddScoped<INewsletterService, NewsletterService>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        // Allow enums to be sent as both string ("Cart") and number (1).
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: true));
     });
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    // Keep enum handling consistent for any non-controller JSON endpoints too.
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: true));
+});
 
 builder.Services.AddOpenApi(options =>
 {

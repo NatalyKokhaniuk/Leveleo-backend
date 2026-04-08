@@ -5,31 +5,31 @@ using LeveLEO.Features.Promotions.Models;
 using LeveLEO.Features.ShoppingCarts.DTO;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
+using LeveLEO.Infrastructure.SlugGenerator;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeveLEO.Features.Promotions.Services;
 
-public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionService
+public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerator slugGenerator) : IPromotionService
 {
     private readonly AppDbContext _db = db;
     private readonly IEventBus _eventBus = eventBus;
+    private readonly ISlugGenerator _slugGenerator = slugGenerator;
 
     #region CRUD
 
     public async Task<PromotionResponseDto> CreateAsync(CreatePromotionDto dto)
     {
-        if (await _db.Promotions.AnyAsync(p => p.Slug == dto.Slug))
-            throw new ApiException("PROMOTION_SLUG_EXISTS",
-                $"Promotion with slug '{dto.Slug}' already exists.", 400);
-
         if (dto.StartDate >= dto.EndDate)
             throw new ApiException("INVALID_DATES",
                 "StartDate must be earlier than EndDate.", 400);
 
+        var slug = await _slugGenerator.GenerateUniqueSlugAsync(_db.Promotions, dto.Name, x => x.Slug);
+
         var promotion = new Promotion
         {
             Name = dto.Name,
-            Slug = dto.Slug,
+            Slug = slug,
             Description = dto.Description,
             ImageKey = dto.ImageKey,
             Level = dto.Level,
@@ -86,8 +86,11 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
             .FirstOrDefaultAsync(p => p.Id == id)
             ?? throw new ApiException("PROMOTION_NOT_FOUND", "", 404);
 
-        if (dto.Name.HasValue)
+        if (dto.Name.HasValue && dto.Name.Value != promotion.Name)
+        {
             promotion.Name = dto.Name.Value!;
+            promotion.Slug = await _slugGenerator.GenerateUniqueSlugAsync(_db.Promotions, promotion.Name, x => x.Slug);
+        }
 
         if (dto.Description.HasValue)
             promotion.Description = dto.Description.Value;
@@ -143,6 +146,8 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
             Description = p.Description,
             ImageKey = p.ImageKey,
             Level = p.Level,
+            ProductConditions = p.ProductConditions,
+            CartConditions = p.CartConditions,
             DiscountType = p.DiscountType,
             DiscountValue = p.DiscountValue,
             StartDate = p.StartDate,
@@ -173,7 +178,8 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
     public async Task<List<PromotionResponseDto>> GetActiveAsync()
     {
         var promotions = await _db.Promotions
-        .Where(p => p.IsActive)
+        .Where(p => p.StartDate <= DateTime.UtcNow &&
+            p.EndDate >= DateTime.UtcNow)
         .ToListAsync();
 
         return [.. promotions.Select(p => new PromotionResponseDto
@@ -522,23 +528,26 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
 
     public async Task<PromotionTranslationDto> AddTranslationAsync(Guid promotionId, PromotionTranslationDto dto)
     {
-        var promotion = await _db.Promotions
-            .Include(p => p.Translations)
-            .FirstOrDefaultAsync(p => p.Id == promotionId)
-            ?? throw new KeyNotFoundException($"Promotion with Id '{promotionId}' not found.");
+        var normalizedLanguageCode = NormalizeLanguageCode(dto.LanguageCode);
 
-        if (promotion.Translations.Any(t => t.LanguageCode == dto.LanguageCode))
-            throw new InvalidOperationException($"Translation for language '{dto.LanguageCode}' already exists.");
+        var promotionExists = await _db.Promotions.AnyAsync(p => p.Id == promotionId);
+        if (!promotionExists)
+            throw new KeyNotFoundException($"Promotion with Id '{promotionId}' not found.");
+
+        var translationExists = await _db.PromotionTranslations
+            .AnyAsync(t => t.PromotionId == promotionId && t.LanguageCode == normalizedLanguageCode);
+        if (translationExists)
+            throw new InvalidOperationException($"Translation for language '{normalizedLanguageCode}' already exists.");
 
         var translation = new PromotionTranslation
         {
             PromotionId = promotionId,
-            LanguageCode = dto.LanguageCode,
+            LanguageCode = normalizedLanguageCode,
             Name = dto.Name,
             Description = dto.Description
         };
 
-        promotion.Translations.Add(translation);
+        _db.PromotionTranslations.Add(translation);
         await _db.SaveChangesAsync();
 
         return new PromotionTranslationDto
@@ -551,9 +560,11 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
 
     public async Task<PromotionTranslationDto> UpdateTranslationAsync(Guid promotionId, PromotionTranslationDto dto)
     {
+        var normalizedLanguageCode = NormalizeLanguageCode(dto.LanguageCode);
+
         var translation = await _db.PromotionTranslations
-            .FirstOrDefaultAsync(t => t.PromotionId == promotionId && t.LanguageCode == dto.LanguageCode)
-            ?? throw new KeyNotFoundException($"Translation for language '{dto.LanguageCode}' not found for promotion '{promotionId}'.");
+            .FirstOrDefaultAsync(t => t.PromotionId == promotionId && t.LanguageCode == normalizedLanguageCode)
+            ?? throw new KeyNotFoundException($"Translation for language '{normalizedLanguageCode}' not found for promotion '{promotionId}'.");
 
         translation.Name = dto.Name;
         translation.Description = dto.Description;
@@ -570,13 +581,18 @@ public class PromotionService(AppDbContext db, IEventBus eventBus) : IPromotionS
 
     public async Task DeleteTranslationAsync(Guid promotionId, string languageCode)
     {
+        var normalizedLanguageCode = NormalizeLanguageCode(languageCode);
+
         var translation = await _db.PromotionTranslations
-            .FirstOrDefaultAsync(t => t.PromotionId == promotionId && t.LanguageCode == languageCode)
-            ?? throw new KeyNotFoundException($"Translation for language '{languageCode}' not found for promotion '{promotionId}'.");
+            .FirstOrDefaultAsync(t => t.PromotionId == promotionId && t.LanguageCode == normalizedLanguageCode)
+            ?? throw new KeyNotFoundException($"Translation for language '{normalizedLanguageCode}' not found for promotion '{promotionId}'.");
 
         _db.PromotionTranslations.Remove(translation);
         await _db.SaveChangesAsync();
     }
+
+    private static string NormalizeLanguageCode(string languageCode) =>
+        languageCode.Trim().ToLowerInvariant();
 
     #endregion Translation CRUD
 }
