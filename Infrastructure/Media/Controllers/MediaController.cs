@@ -45,8 +45,10 @@ public class MediaController(IMediaService mediaService) : ControllerBase
 
     /// <summary>
     /// Повертає тимчасовий pre-signed URL для ключа в сховищі (для &lt;img src&gt;, превʼю тощо).
+    /// Доступно без авторизації: ключі приходять у публічних відповідях API (наприклад, зображення товарів).
     /// </summary>
     [HttpGet("url")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetSignedUrl(
         [FromQuery] string key,
         [FromQuery] int expiresMinutes = 30)

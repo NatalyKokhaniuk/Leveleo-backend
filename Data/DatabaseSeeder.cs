@@ -379,6 +379,10 @@ public static class DatabaseSeeder
                 new() { Name = "Beyerdynamic DT 770 Pro 80 Ohm", Slug = "beyerdynamic-dt-770-pro", Description = "Closed studio headphones with bass reflex technology", Price = 8990.00m, StockQuantity = 15, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["headphones"] },
                 new() { Name = "Sony MDR-7506", Slug = "sony-mdr-7506", Description = "Professional studio monitor headphones", Price = 5490.00m, StockQuantity = 25, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["headphones"] },
                 new() { Name = "Audio-Technica ATH-M40x", Slug = "audio-technica-ath-m40x", Description = "Professional studio monitor headphones", Price = 4990.00m, StockQuantity = 18, IsActive = true, BrandId = brandsDict["audio-technica"], CategoryId = catsDict["headphones"] },
+                new() { Name = "Shure SRH840A", Slug = "shure-srh840a", Description = "Professional closed-back studio headphones with precise, detailed sound", Price = 6490.00m, StockQuantity = 14, IsActive = true, BrandId = brandsDict["shure"], CategoryId = catsDict["headphones"] },
+                new() { Name = "Sennheiser HD 560S", Slug = "sennheiser-hd-560s", Description = "Open-back reference headphones for analytical listening and mixing", Price = 8290.00m, StockQuantity = 12, IsActive = true, BrandId = brandsDict["sennheiser"], CategoryId = catsDict["headphones"] },
+                new() { Name = "JBL Tune 760NC", Slug = "jbl-tune-760nc", Description = "Wireless over-ear headphones with active noise cancellation", Price = 3990.00m, StockQuantity = 22, IsActive = true, BrandId = brandsDict["jbl"], CategoryId = catsDict["headphones"] },
+                new() { Name = "Audio-Technica ATH-R70x", Slug = "audio-technica-ath-r70x", Description = "Open-back professional reference headphones for mixing and mastering", Price = 12490.00m, StockQuantity = 8, IsActive = true, BrandId = brandsDict["audio-technica"], CategoryId = catsDict["headphones"] },
 
                 new() { Name = "Kali Audio LP-6 v2", Slug = "kali-lp-6-v2", Description = "6.5-inch active nearfield studio monitors with boundary EQ", Price = 9919.00m, StockQuantity = 20, IsActive = true, BrandId = brandsDict["kali-audio"], CategoryId = catsDict["studio-monitors"] },
                 new() { Name = "Yamaha HS8", Slug = "yamaha-hs8", Description = "8-inch studio monitors with room control", Price = 13429.00m, StockQuantity = 12, IsActive = true, BrandId = brandsDict["yamaha"], CategoryId = catsDict["studio-monitors"] },
@@ -453,6 +457,18 @@ public static class DatabaseSeeder
             context.Products.AddRange(products);
             await context.SaveChangesAsync();
 
+            // Дата додання для нових навушників — «сьогодні» на момент сидування (UTC)
+            var newHeadphoneSlugs = new[] { "shure-srh840a", "sennheiser-hd-560s", "jbl-tune-760nc", "audio-technica-ath-r70x" };
+            var addedAt = DateTimeOffset.UtcNow;
+            foreach (var slug in newHeadphoneSlugs)
+            {
+                var p = products.First(x => x.Slug == slug);
+                p.CreatedAt = addedAt;
+                p.UpdatedAt = addedAt;
+            }
+
+            await context.SaveChangesAsync();
+
             foreach (var p in products)
             {
                 context.ProductTranslations.AddRange(
@@ -473,6 +489,32 @@ public static class DatabaseSeeder
             attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "sennheiser-hd-25").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "70 Ω" });
             attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "sennheiser-hd-280-pro").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "64 Ω" });
             attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "audio-technica-ath-m50x").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "38 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "beyerdynamic-dt-770-pro").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "80 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "sony-mdr-7506").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "63 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "audio-technica-ath-m40x").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "35 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "shure-srh840a").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "44 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "sennheiser-hd-560s").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "120 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "jbl-tune-760nc").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "32 Ω" });
+            attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "audio-technica-ath-r70x").Id, ProductAttributeId = attrsDict["impedance"], StringValue = "99 Ω" });
+
+            // Вага та Bluetooth для навушників
+            void AddHeadphoneExtras(string slug, string weightKg, bool bluetooth)
+            {
+                var pid = products.First(p => p.Slug == slug).Id;
+                attributeValues.Add(new ProductAttributeValue { ProductId = pid, ProductAttributeId = attrsDict["weight"], StringValue = weightKg });
+                attributeValues.Add(new ProductAttributeValue { ProductId = pid, ProductAttributeId = attrsDict["bluetooth"], BoolValue = bluetooth });
+            }
+
+            AddHeadphoneExtras("sennheiser-hd-25", "0.14", false);
+            AddHeadphoneExtras("sennheiser-hd-280-pro", "0.29", false);
+            AddHeadphoneExtras("audio-technica-ath-m50x", "0.29", false);
+            AddHeadphoneExtras("beyerdynamic-dt-770-pro", "0.27", false);
+            AddHeadphoneExtras("sony-mdr-7506", "0.23", false);
+            AddHeadphoneExtras("audio-technica-ath-m40x", "0.24", false);
+            AddHeadphoneExtras("shure-srh840a", "0.31", false);
+            AddHeadphoneExtras("sennheiser-hd-560s", "0.24", false);
+            AddHeadphoneExtras("jbl-tune-760nc", "0.22", true);
+            AddHeadphoneExtras("audio-technica-ath-r70x", "0.22", false);
 
             // Розмір вуфера для моніторів
             attributeValues.Add(new ProductAttributeValue { ProductId = products.First(p => p.Slug == "kali-lp-6-v2").Id, ProductAttributeId = attrsDict["woofer-size"], StringValue = "6.5\"" });
@@ -741,6 +783,10 @@ public static class DatabaseSeeder
         "Beyerdynamic DT 770 Pro 80 Ohm" => "Закриті студійні навушники з технологією Bass Reflex",
         "Sony MDR-7506" => "Професійні студійні моніторні навушники",
         "Audio-Technica ATH-M40x" => "Професійні студійні моніторні навушники",
+        "Shure SRH840A" => "Професійні закриті студійні навушники з точним детальним звучанням",
+        "Sennheiser HD 560S" => "Відкриті референсні навушники для аналітичного прослуховування та міксу",
+        "JBL Tune 760NC" => "Бездротові навколо-вушні навушники з активним шумозаглушенням",
+        "Audio-Technica ATH-R70x" => "Відкриті професійні референсні навушники для міксу та мастерингу",
         "Kali Audio LP-6 v2" => "6.5-дюймові активні nearfield-монітори з точною передачею звуку та boundary EQ",
         "Yamaha HS8" => "8-дюймові студійні монітори з кімнатним контролем та високоточним відтворенням звуку",
         "JBL 305P MkII" => "5-дюймовий активний студійний монітор з Image Control Waveguide",
