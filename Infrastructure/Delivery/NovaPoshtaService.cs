@@ -14,6 +14,10 @@ public class NovaPoshtaService(
 
     private const string ApiUrl = "https://api.novaposhta.ua/v2.0/json/";
 
+    private const int SettlementsPageSize = 150;
+    private const int WarehouseFetchLimit = 500;
+    private const int MaxWarehousePages = 100;
+
     #region Довідники (Cities, Warehouses, Streets)
 
     public async Task<List<CityDto>> SearchCitiesAsync(string query, int limit = 10)
@@ -39,6 +43,98 @@ public class NovaPoshtaService(
 
         var cities = response.Data[0].Addresses ?? [];
         return [.. cities.Take(limit)];
+    }
+
+    public async Task<SettlementsPageDto> GetSettlementsPageAsync(int page, string? findByString = null)
+    {
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        object methodProps = string.IsNullOrWhiteSpace(findByString)
+            ? new { Page = page }
+            : new { Page = page, FindByString = findByString.Trim() };
+
+        var request = new NovaPoshtaRequest
+        {
+            ApiKey = _apiKey,
+            ModelName = "AddressGeneral",
+            CalledMethod = "getSettlements",
+            MethodProperties = methodProps
+        };
+
+        var response = await SendRequestAsync<NovaPoshtaResponse<List<SettlementDirectoryDto>>>(request);
+
+        if (!response.Success || response.Data == null)
+        {
+            logger.LogWarning(
+                "Nova Poshta getSettlements failed (page {Page}): {Errors}",
+                page,
+                string.Join(", ", response.Errors ?? []));
+            return new SettlementsPageDto
+            {
+                Page = page,
+                PageSize = 0,
+                Items = [],
+                HasMore = false
+            };
+        }
+
+        var items = response.Data;
+        return new SettlementsPageDto
+        {
+            Page = page,
+            PageSize = items.Count,
+            Items = items,
+            HasMore = items.Count == SettlementsPageSize
+        };
+    }
+
+    public async Task<List<WarehouseDto>> GetPostomatsBySettlementAsync(string settlementRef)
+    {
+        var all = await FetchAllWarehousesForSettlementAsync(settlementRef);
+        return [.. all.Where(IsPostomat)];
+    }
+
+    public async Task<List<WarehouseDto>> GetBranchWarehousesBySettlementAsync(string settlementRef)
+    {
+        var all = await FetchAllWarehousesForSettlementAsync(settlementRef);
+        return [.. all.Where(w => !IsPostomat(w))];
+    }
+
+    private async Task<List<WarehouseDto>> FetchAllWarehousesForSettlementAsync(string settlementRef)
+    {
+        var all = new List<WarehouseDto>();
+        for (var page = 1; page <= MaxWarehousePages; page++)
+        {
+            var batch = await GetWarehousesByCityAsync(settlementRef, page, WarehouseFetchLimit);
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            all.AddRange(batch);
+            if (batch.Count < WarehouseFetchLimit)
+            {
+                break;
+            }
+        }
+
+        return all;
+    }
+
+    private static bool IsPostomat(WarehouseDto w)
+    {
+        if (!string.IsNullOrEmpty(w.TypeOfWarehouse) &&
+            w.TypeOfWarehouse.Contains("Поштомат", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var d = w.Description ?? string.Empty;
+        return d.Contains("Поштомат", StringComparison.OrdinalIgnoreCase)
+            || d.Contains("Почтомат", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<List<WarehouseDto>> GetWarehousesByCityAsync(string cityRef, int page = 1, int limit = 50)

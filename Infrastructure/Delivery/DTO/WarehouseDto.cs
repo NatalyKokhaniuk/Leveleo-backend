@@ -9,6 +9,16 @@ public class WarehouseDto
     public string CityDescription { get; set; } = null!;
     public string SettlementRef { get; set; } = null!;
     public string SettlementDescription { get; set; } = null!;
+
+    /// <summary>Коротка адреса (якщо повертає API).</summary>
+    public string? ShortAddress { get; set; }
+
+    /// <summary>Ref типу відділення (поштомат, відділення тощо).</summary>
+    public string? TypeOfWarehouseRef { get; set; }
+
+    /// <summary>Назва типу відділення.</summary>
+    public string? TypeOfWarehouse { get; set; }
+
     public double Latitude { get; set; }
     public double Longitude { get; set; }
 }

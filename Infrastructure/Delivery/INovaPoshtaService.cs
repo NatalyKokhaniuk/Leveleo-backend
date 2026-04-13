@@ -7,7 +7,18 @@ public interface INovaPoshtaService
     // Пошук міст
     Task<List<CityDto>> SearchCitiesAsync(string query, int limit = 10);
 
-    // Отримання відділень міста
+    /// <summary>
+    /// Довідник населених пунктів НП (getSettlements), сторінка за номером. Рекомендовано кешувати на клієнті.
+    /// </summary>
+    Task<SettlementsPageDto> GetSettlementsPageAsync(int page, string? findByString = null);
+
+    /// <summary>Усі поштомати обраного населеного пункту (за Ref з довідника / searchSettlements).</summary>
+    Task<List<WarehouseDto>> GetPostomatsBySettlementAsync(string settlementRef);
+
+    /// <summary>Усі відділення (не поштомати) з адресами для населеного пункту.</summary>
+    Task<List<WarehouseDto>> GetBranchWarehousesBySettlementAsync(string settlementRef);
+
+    // Отримання відділень міста (сторінка)
     Task<List<WarehouseDto>> GetWarehousesByCityAsync(string cityRef, int page = 1, int limit = 50);
 
     // Пошук вулиць
