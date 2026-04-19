@@ -181,79 +181,97 @@ public class OrderService(
             );
         }
 
-        using var tx = await db.Database.BeginTransactionAsync();
+        var strategy = db.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            var order = new Order
-            {
-                Number = await GenerateOrderNumberAsync(),
-                UserId = userId,
-                Status = OrderStatus.Pending,
-                AddressId = orderCreateDto.UserAddressId,
-                TotalOriginalPrice = cart.TotalOriginalPrice,
-                TotalProductDiscount = cart.TotalProductDiscount,
-                TotalCartDiscount = cart.TotalCartDiscount,
-                TotalPayable = cart.TotalPayable,
-            };
+            Order? order = null;
+            CreatePaymentResultDto? payment = null;
 
-            order.OrderItems = [.. cart.Items.Select(ci => new OrderItem
-            {
-                Id = Guid.NewGuid(),
-                OrderId = order.Id,
-                ProductId = ci.Product.Id,
-                Quantity = ci.Quantity,
-                UnitPrice = ci.Price,
-                DiscountedUnitPrice = ci.PriceAfterCartPromotion,
-            })];
+            await using var tx = await db.Database.BeginTransactionAsync();
+            var committed = false;
 
-            await db.Orders.AddAsync(order);
-            await db.SaveChangesAsync();
-
-            // резервування товарів
-            foreach (var item in order.OrderItems)
+            try
             {
-                await inventoryService.ReserveAsync(item.ProductId, order.Id, item.Quantity, PayloadValidity);
+                order = new Order
+                {
+                    Number = await GenerateOrderNumberAsync(),
+                    UserId = userId,
+                    Status = OrderStatus.Pending,
+                    AddressId = orderCreateDto.UserAddressId,
+                    TotalOriginalPrice = cart.TotalOriginalPrice,
+                    TotalProductDiscount = cart.TotalProductDiscount,
+                    TotalCartDiscount = cart.TotalCartDiscount,
+                    TotalPayable = cart.TotalPayable,
+                };
+
+                order.OrderItems = [.. cart.Items.Select(ci => new OrderItem
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    ProductId = ci.Product.Id,
+                    Quantity = ci.Quantity,
+                    UnitPrice = ci.Price,
+                    DiscountedUnitPrice = ci.PriceAfterCartPromotion,
+                })];
+
+                await db.Orders.AddAsync(order);
+                await db.SaveChangesAsync();
+
+                // резервування товарів
+                foreach (var item in order.OrderItems)
+                {
+                    await inventoryService.ReserveAsync(item.ProductId, order.Id, item.Quantity, PayloadValidity);
+                }
+                payment = await paymentService.CreatePaymentAsync(order, PayloadValidity, serverUrl);
+
+                order.PaymentId = payment.PaymentId;
+
+                await db.SaveChangesAsync();
+
+                await tx.CommitAsync();
+                committed = true;
             }
-            var payment = await paymentService.CreatePaymentAsync(order, PayloadValidity, serverUrl);
+            catch
+            {
+                if (!committed)
+                    await tx.RollbackAsync();
+                cart = await cartService.GetCalculatedCartAsync(userId);
+                return new CreateOrderResultDto
+                {
+                    ShoppingCart = cart,
+                    Message = "Order creation has failed"
+                };
+            }
 
-            order.PaymentId = payment.PaymentId;
-
-            await db.SaveChangesAsync();
-
-            await tx.CommitAsync();
+            var userEmail = await db.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
 
             await eventBus.PublishAsync(new OrderCreatedEvent
             {
-                OrderId = order.Id,
+                OrderId = order!.Id,
                 OrderNumber = order.Number,
                 UserId = order.UserId,
-                UserEmail = order.User.Email!,
+                UserEmail = userEmail!,
                 TotalPayable = order.TotalPayable
             });
 
             _ = Task.Run(async () =>
             {
                 await Task.Delay(PayloadValidity + TimeSpan.FromMinutes(5));
-                await CheckExpiredPaymentAsync(payment.PaymentId);
+                await CheckExpiredPaymentAsync(payment!.PaymentId);
             });
 
             return new CreateOrderResultDto
             {
+                OrderId = order.Id,
+                Data = payment!.Payload,
                 Payload = payment.Payload,
-                OrderId = order.Id
+                Signature = payment.Signature
             };
-        }
-        catch
-        {
-            await tx.RollbackAsync();
-            cart = await cartService.GetCalculatedCartAsync(userId);
-            return new CreateOrderResultDto
-            {
-                ShoppingCart = cart,
-                Message = "Order creation has failed"
-            };
-        }
+        });
     }
 
     public async Task NotifyPaymentUpdated(Guid paymentId)
@@ -265,6 +283,7 @@ public class OrderService(
             );
         Order order = await db.Orders
             .Include(o => o.Payment)
+            .Include(o => o.OrderItems)
             .FirstOrDefaultAsync(o => o.Id == paymentResponseDto.OrderId)
             ?? throw new ApiException(
                 "ORDER_NOT_FOUND",
@@ -279,36 +298,48 @@ public class OrderService(
             case PaymentStatus.Success:
                 if (order.Status == OrderStatus.Pending)
                 {
-                    using var tx = await db.Database.BeginTransactionAsync();
-                    try
+                    var strategy = db.Database.CreateExecutionStrategy();
+                    await strategy.ExecuteAsync(async () =>
                     {
-                        order.Status = OrderStatus.Processing;
-                        order.UpdatedAt = DateTimeOffset.UtcNow;
-
-                        foreach (var item in order.OrderItems)
+                        await using var tx = await db.Database.BeginTransactionAsync();
+                        var committed = false;
+                        try
                         {
-                            await inventoryService.ConfirmReservationAsync(item.ProductId, order.Id);
+                            order.Status = OrderStatus.Processing;
+                            order.UpdatedAt = DateTimeOffset.UtcNow;
+
+                            foreach (var item in order.OrderItems)
+                            {
+                                await inventoryService.ConfirmReservationAsync(item.ProductId, order.Id);
+                            }
+
+                            await cartService.ClearCartAsync(order.UserId);
+
+                            await db.SaveChangesAsync();
+                            await tx.CommitAsync();
+                            committed = true;
+                        }
+                        catch
+                        {
+                            if (!committed)
+                                await tx.RollbackAsync();
+                            throw;
                         }
 
-                        await cartService.ClearCartAsync(order.UserId);
-
-                        await db.SaveChangesAsync();
-                        await tx.CommitAsync();
+                        var userEmail = await db.Users.AsNoTracking()
+                            .Where(u => u.Id == order.UserId)
+                            .Select(u => u.Email)
+                            .FirstOrDefaultAsync();
 
                         await eventBus.PublishAsync(new OrderPaidEvent
                         {
                             OrderId = order.Id,
                             OrderNumber = order.Number,
                             UserId = order.UserId,
-                            UserEmail = order.User.Email!,
+                            UserEmail = userEmail!,
                             AmountPaid = paymentResponseDto.Amount
                         });
-                    }
-                    catch
-                    {
-                        await tx.RollbackAsync();
-                        throw;
-                    }
+                    });
                 }
                 else if (order.Status == OrderStatus.PaymentFailed)
                 {
@@ -334,24 +365,31 @@ public class OrderService(
             case PaymentStatus.Failure:
                 if (order.Status == OrderStatus.Pending)
                 {
-                    using var tx = await db.Database.BeginTransactionAsync();
-                    try
+                    var strategy = db.Database.CreateExecutionStrategy();
+                    await strategy.ExecuteAsync(async () =>
                     {
-                        order.Status = OrderStatus.PaymentFailed;
-
-                        foreach (var item in order.OrderItems)
+                        await using var tx = await db.Database.BeginTransactionAsync();
+                        var committed = false;
+                        try
                         {
-                            await inventoryService.ReleaseAsync(item.ProductId, order.Id);
-                        }
+                            order.Status = OrderStatus.PaymentFailed;
 
-                        await db.SaveChangesAsync();
-                        await tx.CommitAsync();
-                    }
-                    catch
-                    {
-                        await tx.RollbackAsync();
-                        throw;
-                    }
+                            foreach (var item in order.OrderItems)
+                            {
+                                await inventoryService.ReleaseAsync(item.ProductId, order.Id);
+                            }
+
+                            await db.SaveChangesAsync();
+                            await tx.CommitAsync();
+                            committed = true;
+                        }
+                        catch
+                        {
+                            if (!committed)
+                                await tx.RollbackAsync();
+                            throw;
+                        }
+                    });
                 }
                 break;
 

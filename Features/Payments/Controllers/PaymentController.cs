@@ -1,5 +1,6 @@
 ﻿using LeveLEO.Features.Payments.DTO;
 using LeveLEO.Features.Payments.Services;
+using LeveLEO.Features.Products.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,17 @@ namespace LeveLEO.Features.Payments.Controllers;
 [Route("api/payments")]
 public class PaymentController(IPaymentService paymentService) : ControllerBase
 {
+    /// <summary>
+    /// Список усіх платежів з фільтрацією та пагінацією (адмін-панель).
+    /// </summary>
+    [HttpGet]
+    [Authorize(Roles = "Admin,Moderator")]
+    public async Task<ActionResult<PagedResultDto<PaymentListItemDto>>> GetAllPayments([FromQuery] AdminPaymentFilterDto filter)
+    {
+        var result = await paymentService.GetAllPaymentsAsync(filter);
+        return Ok(result);
+    }
+
     /// <summary>
     /// Повертає інформацію про платіж за його Id
     /// Доступний лише авторизованому користувачу

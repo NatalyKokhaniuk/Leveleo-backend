@@ -4,6 +4,7 @@ using LeveLEO.Features.Orders.Models;
 using LeveLEO.Features.Orders.Services;
 using LeveLEO.Features.Payments.DTO;
 using LeveLEO.Features.Payments.Models;
+using LeveLEO.Features.Products.DTO;
 using LeveLEO.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
@@ -36,12 +37,74 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
         await db.SaveChangesAsync();
 
         var payload = liqPayService.GenerateData(payment, serverUrl, expireAt);
+        var signature = liqPayService.GenerateSignature(payload);
 
         return new CreatePaymentResultDto
         {
             Payload = payload,
+            Signature = signature,
             ExpireAt = expireAt,
             PaymentId = payment.Id
+        };
+    }
+
+    public async Task<PagedResultDto<PaymentListItemDto>> GetAllPaymentsAsync(AdminPaymentFilterDto filter)
+    {
+        var query = db.Payments
+            .Include(p => p.Order)
+            .AsQueryable();
+
+        if (filter.Status.HasValue)
+            query = query.Where(p => p.Status == filter.Status.Value);
+
+        if (filter.StartDate.HasValue)
+            query = query.Where(p => p.CreatedAt >= filter.StartDate.Value);
+
+        if (filter.EndDate.HasValue)
+            query = query.Where(p => p.CreatedAt <= filter.EndDate.Value);
+
+        query = filter.SortBy?.ToLower() switch
+        {
+            "amount" => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(p => p.Amount)
+                : query.OrderByDescending(p => p.Amount),
+            "status" => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(p => p.Status)
+                : query.OrderByDescending(p => p.Status),
+            "expireat" => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(p => p.ExpireAt)
+                : query.OrderByDescending(p => p.ExpireAt),
+            _ => filter.SortDirection?.ToLower() == "asc"
+                ? query.OrderBy(p => p.CreatedAt)
+                : query.OrderByDescending(p => p.CreatedAt)
+        };
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .Select(p => new PaymentListItemDto
+            {
+                Id = p.Id,
+                OrderId = p.OrderId,
+                OrderNumber = p.Order.Number,
+                Amount = p.Amount,
+                Currency = p.Currency,
+                LiqPayPaymentId = p.LiqPayPaymentId,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                ExpireAt = p.ExpireAt
+            })
+            .ToListAsync();
+
+        return new PagedResultDto<PaymentListItemDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = filter.Page,
+            PageSize = filter.PageSize
         };
     }
 
@@ -169,5 +232,7 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
         Currency = payment.Currency,
         LiqPayPaymentId = payment.LiqPayPaymentId,
         Status = payment.Status,
+        CreatedAt = payment.CreatedAt,
+        UpdatedAt = payment.UpdatedAt
     };
 }
