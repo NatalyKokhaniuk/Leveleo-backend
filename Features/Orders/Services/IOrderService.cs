@@ -17,9 +17,12 @@ public interface IOrderService
 
     Task<CreateOrderResultDto> CreateOrderFromCartAsync(string userId, OrderCreateDto orderCreateDto, string serverUrl);
 
-    Task<OrderDetailDto> UpdateAsync(Guid orderId, OrderUpdateDto order);
+    Task<OrderDetailDto> UpdateAsync(Guid orderId, OrderUpdateDto order, string requestingUserId, bool isStaff);
 
     Task NotifyPaymentUpdated(Guid paymentId);
 
     Task NotifyDeliveryUpdated(Guid orderId, DeliveryStatus deliveryStatus);
+
+    /// <summary>Сканує прострочені неоплачені платежі (фоновий сервіс + можна викликати вручну).</summary>
+    Task ProcessExpiredPendingPaymentsAsync(CancellationToken cancellationToken = default);
 }

@@ -132,10 +132,11 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     /// Доступно: адміністратори для будь-яких полів, користувачі - тільки адреса для Pending замовлень
     /// </summary>
     [HttpPut("{orderId:guid}")]
-    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<OrderDetailDto>> Update(Guid orderId, [FromBody] OrderUpdateDto orderUpdateDto)
     {
-        var result = await orderService.UpdateAsync(orderId, orderUpdateDto);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var isStaff = User.IsInRole("Admin") || User.IsInRole("Moderator");
+        var result = await orderService.UpdateAsync(orderId, orderUpdateDto, userId, isStaff);
         return Ok(result);
     }
 
@@ -151,12 +152,13 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<OrderDetailDto>> CancelOrder(Guid orderId)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var updateDto = new OrderUpdateDto
         {
             Status = OrderStatus.Cancelled
         };
 
-        var result = await orderService.UpdateAsync(orderId, updateDto);
+        var result = await orderService.UpdateAsync(orderId, updateDto, userId, isStaff: true);
         return Ok(result);
     }
 

@@ -1,5 +1,4 @@
-﻿using Amazon.S3.Model;
-using LeveLEO.Data;
+﻿using LeveLEO.Data;
 using LeveLEO.Features.Orders.Models;
 using LeveLEO.Features.Orders.Services;
 using LeveLEO.Features.Payments.DTO;
@@ -7,14 +6,25 @@ using LeveLEO.Features.Payments.Models;
 using LeveLEO.Features.Products.DTO;
 using LeveLEO.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Text.Json.Serialization;
 
 namespace LeveLEO.Features.Payments.Services;
 
-public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPaymentService
+public class PaymentService(
+    AppDbContext db,
+    ILiqPayService liqPayService,
+    IServiceProvider serviceProvider,
+    ILogger<PaymentService> logger) : IPaymentService
 {
+    private static readonly JsonSerializerOptions s_liqPayPayloadJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString
+    };
+
     public async Task<CreatePaymentResultDto> CreatePaymentAsync(
     Order order,
     TimeSpan payloadValidity,
@@ -117,50 +127,53 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
         "Payment not found.",
         404
     );
-        if (payment != null
-            && payment.Status == PaymentStatus.Pending
-            && payment.ExpireAt <= DateTimeOffset.UtcNow)
+        var wasPending = payment.Status == PaymentStatus.Pending;
+        if (wasPending)
         {
-            var liqStatus = await liqPayService.GetPaymentStatusAsync(payment.Id);
-
-            payment.Status = liqStatus.Status switch
+            try
             {
-                "success" => PaymentStatus.Success,
-                "failure" => PaymentStatus.Failure,
-                "pending" => PaymentStatus.Pending,
-                _ => PaymentStatus.Pending
-            };
-
-            payment.UpdatedAt = DateTimeOffset.UtcNow;
-            await db.SaveChangesAsync();
+                var liqStatus = await liqPayService.GetPaymentStatusAsync(payment.Id);
+                ApplyLiqPayStatusToPayment(payment, liqStatus);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "LiqPay status sync failed for payment {PaymentId}; returning DB state.", paymentId);
+            }
         }
-        if (payment != null)
-            return MapToDto(payment);
-        throw new ApiException("PAYMENT_NOT_FOUND", $"Payment with id {paymentId} not found.", 404);
+
+        if (wasPending && payment.Status != PaymentStatus.Pending)
+        {
+            var orderService = serviceProvider.GetRequiredService<IOrderService>();
+            await orderService.NotifyPaymentUpdated(payment.Id);
+        }
+
+        return MapToDto(payment);
     }
 
     public async Task HandleLiqPayCallbackAsync(LiqPayStatusResponseDto callback)
     {
-        //  Payment по LiqPayPaymentId
+        var orderId = callback.OrderId
+            ?? throw new ApiException("INVALID_LIQPAY_PAYLOAD", "LiqPay callback missing order_id.", 422);
+
         var payment = await db.Payments
             .Include(p => p.Order)
-            .FirstOrDefaultAsync(p => p.Id.ToString() == callback.OrderId)
+            .FirstOrDefaultAsync(p => p.Id.ToString() == orderId)
             ?? throw new ApiException(
         "PAYMENT_NOT_FOUND",
         "Payment not found.",
         404
     );
 
-        payment.Status = callback.Status switch
-        {
-            "success" => PaymentStatus.Success,
-            "failure" => PaymentStatus.Failure,
-            "pending" => PaymentStatus.Success,//для тестування, потім поміняти
-
-            _ => PaymentStatus.Pending,
-        };
+        ApplyLiqPayStatusToPayment(payment, callback);
 
         await db.SaveChangesAsync();
+
+        if (payment.Status != PaymentStatus.Pending)
+        {
+            var orderService = serviceProvider.GetRequiredService<IOrderService>();
+            await orderService.NotifyPaymentUpdated(payment.Id);
+        }
     }
 
     public LiqPayStatusResponseDto VerifyCallback(string data, string signature)
@@ -176,7 +189,7 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
 
         var json = Encoding.UTF8.GetString(Convert.FromBase64String(data));
 
-        var callback = JsonSerializer.Deserialize<LiqPayStatusResponseDto>(json)
+        var callback = JsonSerializer.Deserialize<LiqPayStatusResponseDto>(json, s_liqPayPayloadJson)
             ?? throw new ApiException(
                 "INVALID_LIQPAY_PAYLOAD",
                 "Invalid LiqPay callback payload.",
@@ -184,6 +197,24 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
             );
 
         return callback;
+    }
+
+    private static void ApplyLiqPayStatusToPayment(Payment payment, LiqPayStatusResponseDto liq)
+    {
+        var raw = liq.Status?.Trim().ToLowerInvariant();
+        payment.Status = raw switch
+        {
+            "success" or "sandbox" => PaymentStatus.Success,
+            "failure" or "error" => PaymentStatus.Failure,
+            "reversed" => PaymentStatus.Refunded,
+            "pending" or "wait_accept" => PaymentStatus.Pending,
+            _ => PaymentStatus.Pending
+        };
+
+        if (liq.PaymentId.HasValue)
+            payment.LiqPayPaymentId = liq.PaymentId.Value.ToString();
+
+        payment.UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public async Task CancelPaymentAsync(Guid paymentId)
@@ -204,6 +235,9 @@ public class PaymentService(AppDbContext db, ILiqPayService liqPayService) : IPa
         payment.Status = PaymentStatus.Failure;
 
         await db.SaveChangesAsync();
+
+        var orderService = serviceProvider.GetRequiredService<IOrderService>();
+        await orderService.NotifyPaymentUpdated(paymentId);
     }
 
     public async Task RefundPaymentAsync(Guid paymentId, decimal? amount = null, string? reason = null)

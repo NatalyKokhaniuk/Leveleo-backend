@@ -18,6 +18,7 @@ using LeveLEO.Infrastructure.Payments;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
@@ -30,9 +31,11 @@ public class OrderService(
     IPaymentService paymentService,
     IProductService productService,
     IAddressService addressService,
-    IEventBus eventBus) : IOrderService
+    IEventBus eventBus,
+    ILogger<OrderService> logger) : IOrderService
 {
-    private static readonly TimeSpan PayloadValidity = TimeSpan.FromMinutes(10);
+    /// <summary>Термін дії LiqPay payload, резерву на складі та очікування оплати перед видаленням платежу.</summary>
+    private static readonly TimeSpan PayloadValidity = TimeSpan.FromMinutes(5);
 
     public async Task<OrderDetailDto> GetByIdAsync(Guid orderId)
     {
@@ -50,10 +53,12 @@ public class OrderService(
 
         await RefreshPaymentStatusIfNeededAsync(order);
 
-        if (order.PaymentId != null)
-        {
-            _ = await paymentService.GetPaymentByIdAsync((Guid)order.PaymentId);
-        }
+        order = await db.Orders
+            .Include(o => o.OrderItems)
+            .Include(o => o.Address)
+            .Include(o => o.Payment)
+            .Include(o => o.Delivery)
+            .FirstAsync(o => o.Id == orderId);
 
         return await MapToDetailDtoAsync(order);
     }
@@ -74,10 +79,12 @@ public class OrderService(
 
         await RefreshPaymentStatusIfNeededAsync(order);
 
-        if (order.PaymentId != null)
-        {
-            _ = await paymentService.GetPaymentByIdAsync((Guid)order.PaymentId);
-        }
+        order = await db.Orders
+            .Include(o => o.OrderItems)
+            .Include(o => o.Address)
+            .Include(o => o.Payment)
+            .Include(o => o.Delivery)
+            .FirstAsync(o => o.Number == orderNumber);
 
         return await MapToDetailDtoAsync(order);
     }
@@ -94,12 +101,29 @@ public class OrderService(
             query = query.Where(o => o.CreatedAt <= endDate.Value);
 
         var orders = await query
+            .Include(o => o.Address)
+            .Include(o => o.Payment)
             .OrderByDescending(o => o.CreatedAt)
-            .ToListAsync(); 
+            .ToListAsync();
 
         foreach (var order in orders)
         {
             await RefreshPaymentStatusIfNeededAsync(order);
+        }
+
+        if (orders.Count > 0)
+        {
+            var ids = orders.Select(o => o.Id).ToList();
+            var statusById = await db.Orders
+                .AsNoTracking()
+                .Where(o => ids.Contains(o.Id))
+                .ToDictionaryAsync(o => o.Id, o => o.Status);
+
+            foreach (var order in orders)
+            {
+                if (statusById.TryGetValue(order.Id, out var st))
+                    order.Status = st;
+            }
         }
 
         return [.. orders.Select(o => new OrderListItemDto
@@ -113,7 +137,7 @@ public class OrderService(
         })];
     }
 
-    public async Task<OrderDetailDto> UpdateAsync(Guid orderId, OrderUpdateDto orderUpdate)
+    public async Task<OrderDetailDto> UpdateAsync(Guid orderId, OrderUpdateDto orderUpdate, string requestingUserId, bool isStaff)
     {
         var order = await db.Orders
             .Include(o => o.OrderItems)
@@ -127,8 +151,25 @@ public class OrderService(
                 404
             );
 
-        if (orderUpdate.Status.HasValue)
-        { order.Status = orderUpdate.Status.Value; }
+        if (!isStaff)
+        {
+            if (order.UserId != requestingUserId)
+                throw new ApiException(
+                    "FORBIDDEN",
+                    "You can only view or edit your own orders.",
+                    403
+                );
+            if (order.Status != OrderStatus.Pending)
+                throw new ApiException(
+                    "ORDER_NOT_EDITABLE",
+                    "Only pending orders can be updated by the customer.",
+                    400
+                );
+        }
+
+        if (isStaff && orderUpdate.Status.HasValue)
+            order.Status = orderUpdate.Status.Value;
+
         if (orderUpdate.AddressId.HasValue)
         {
             var addressExists = await db.UserAddresses
@@ -260,8 +301,15 @@ public class OrderService(
 
             _ = Task.Run(async () =>
             {
-                await Task.Delay(PayloadValidity + TimeSpan.FromMinutes(5));
-                await CheckExpiredPaymentAsync(payment!.PaymentId);
+                try
+                {
+                    await Task.Delay(PayloadValidity);
+                    await TryAbandonExpiredUnpaidPaymentAsync(payment!.PaymentId);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Delayed expiry cleanup failed for payment {PaymentId}", payment!.PaymentId);
+                }
             });
 
             return new CreateOrderResultDto
@@ -372,7 +420,8 @@ public class OrderService(
                         var committed = false;
                         try
                         {
-                            order.Status = OrderStatus.PaymentFailed;
+                            order.Status = OrderStatus.Cancelled;
+                            order.UpdatedAt = DateTimeOffset.UtcNow;
 
                             foreach (var item in order.OrderItems)
                             {
@@ -609,43 +658,97 @@ public class OrderService(
         return $"{prefix}-{nextNumber:D4}";
     }
 
-    private async Task CheckExpiredPaymentAsync(Guid paymentId)
+    public async Task ProcessExpiredPendingPaymentsAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ids = await db.Payments
+            .AsNoTracking()
+            .Where(p => p.Status == PaymentStatus.Pending && p.ExpireAt <= now)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var id in ids)
+            await TryAbandonExpiredUnpaidPaymentAsync(id);
+    }
+
+    /// <summary>
+    /// Якщо термін оплати минув і платіж досі Pending — знімаємо резерви, скасовуємо замовлення, видаляємо запис платежу.
+    /// </summary>
+    private async Task TryAbandonExpiredUnpaidPaymentAsync(Guid paymentId)
     {
         try
         {
-            var payment = await paymentService.GetPaymentByIdAsync(paymentId);
-            if (payment != null && payment.Status == PaymentStatus.Pending)
+            var strategy = db.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                await NotifyPaymentUpdated(paymentId);
-            }
+                await using var tx = await db.Database.BeginTransactionAsync();
+                var committed = false;
+                try
+                {
+                    var paymentEntity = await db.Payments
+                        .Include(p => p.Order)
+                        .ThenInclude(o => o.OrderItems)
+                        .FirstOrDefaultAsync(p => p.Id == paymentId);
+
+                    if (paymentEntity == null || paymentEntity.Status != PaymentStatus.Pending)
+                    {
+                        await tx.RollbackAsync();
+                        return;
+                    }
+
+                    if (paymentEntity.ExpireAt > DateTimeOffset.UtcNow)
+                    {
+                        await tx.RollbackAsync();
+                        return;
+                    }
+
+                    var order = paymentEntity.Order;
+                    if (order.Status != OrderStatus.Pending)
+                    {
+                        await tx.RollbackAsync();
+                        return;
+                    }
+
+                    order.PaymentId = null;
+                    order.Status = OrderStatus.Cancelled;
+                    order.UpdatedAt = DateTimeOffset.UtcNow;
+
+                    foreach (var item in order.OrderItems)
+                        await inventoryService.ReleaseAsync(item.ProductId, order.Id);
+
+                    db.Payments.Remove(paymentEntity);
+                    await db.SaveChangesAsync();
+                    await tx.CommitAsync();
+                    committed = true;
+                }
+                catch
+                {
+                    if (!committed)
+                        await tx.RollbackAsync();
+                    throw;
+                }
+            });
         }
         catch (Exception ex)
         {
-            // TODO: Додати логування
-            Console.WriteLine($"Error checking expired payment {paymentId}: {ex.Message}");
+            logger.LogWarning(ex, "Failed to remove expired unpaid payment {PaymentId}", paymentId);
         }
     }
 
     private async Task RefreshPaymentStatusIfNeededAsync(Order order)
     {
-        if (!order.PaymentId.HasValue || order.Payment?.Status != PaymentStatus.Pending)
+        if (!order.PaymentId.HasValue)
+            return;
+
+        if (order.Payment is not { Status: PaymentStatus.Pending })
+            return;
+
+        if (order.Payment.ExpireAt <= DateTimeOffset.UtcNow)
         {
-            return; 
+            await TryAbandonExpiredUnpaidPaymentAsync(order.PaymentId.Value);
+            return;
         }
 
-        var freshPayment = await paymentService.GetPaymentByIdAsync(order.PaymentId.Value);
-        if (freshPayment == null || freshPayment.Status == PaymentStatus.Pending)
-        {
-            return; // статус не змінився або платіж не знайдено
-        }
-
-        order.Payment.Status = freshPayment.Status;
-        await db.SaveChangesAsync();
-
-        if (freshPayment.Status == PaymentStatus.Success && order.Status == OrderStatus.Pending)
-        {
-            order.Status = OrderStatus.Processing;
-            await db.SaveChangesAsync();
-        }
+        await paymentService.GetPaymentByIdAsync(order.PaymentId.Value);
     }
 }

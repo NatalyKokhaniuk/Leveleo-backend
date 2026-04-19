@@ -1,12 +1,22 @@
 ﻿using LeveLEO.Features.Payments.Models;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LeveLEO.Infrastructure.Payments;
 
 public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqPayService
 {
+    private const string LiqPayRequestUrl = "https://www.liqpay.ua/api/request";
+
+    private static readonly JsonSerializerOptions s_liqPayJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString
+    };
+
     private readonly string publicKey =
         config["LiqPay:PublicKey"]
         ?? throw new InvalidOperationException("LiqPay public key is not configured.");
@@ -62,7 +72,7 @@ public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqP
 
         var json = Encoding.UTF8.GetString(Convert.FromBase64String(data));
 
-        var callback = JsonSerializer.Deserialize<LiqPayStatusResponseDto>(json)
+        var callback = JsonSerializer.Deserialize<LiqPayStatusResponseDto>(json, s_liqPayJson)
             ?? throw new ApiException(
                 "INVALID_LIQPAY_PAYLOAD",
                 "Invalid LiqPay callback payload.",
@@ -92,39 +102,8 @@ public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqP
         var data = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
         var signature = GenerateSignature(data);
 
-        var response = await httpClient.PostAsJsonAsync(
-            "https://www.liqpay.ua/api/request",
-            new { data, signature });
-
-        if (!response.IsSuccessStatusCode)
-            throw new ApiException(
-                "LIQPAY_HTTP_ERROR",
-                $"LiqPay HTTP error: {(int)response.StatusCode}",
-                (int)response.StatusCode
-            );
-
-        var rawResponse = await response.Content.ReadAsStringAsync();
-
-        var parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(rawResponse)
-            ?? throw new ApiException(
-                "LIQPAY_INVALID_RESPONSE",
-                "Invalid LiqPay response format.",
-                422
-            );
-
-        if (!parsed.TryGetValue("data", out var responseDataBase64))
-            throw new ApiException(
-                "LIQPAY_NO_DATA",
-                "LiqPay response does not contain data field.",
-                404
-            );
-
-        if (!parsed.TryGetValue("signature", out var responseSignature))
-            throw new ApiException(
-                "LIQPAY_NO_SIGNATURE",
-                "LiqPay response does not contain signature.",
-                404
-            );
+        var rawResponse = await PostLiqPayFormAsync(data, signature);
+        var (responseDataBase64, responseSignature) = ParseLiqPayResponseEnvelope(rawResponse);
 
         var expectedSignature = GenerateSignature(responseDataBase64);
         if (expectedSignature != responseSignature)
@@ -175,39 +154,8 @@ public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqP
         var data = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
         var signature = GenerateSignature(data);
 
-        var response = await httpClient.PostAsJsonAsync(
-            "https://www.liqpay.ua/api/request",
-            new { data, signature });
-
-        if (!response.IsSuccessStatusCode)
-            throw new ApiException(
-                "LIQPAY_HTTP_ERROR",
-                $"LiqPay HTTP error: {(int)response.StatusCode}",
-                (int)response.StatusCode
-            );
-
-        var rawResponse = await response.Content.ReadAsStringAsync();
-
-        var parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(rawResponse)
-            ?? throw new ApiException(
-                "LIQPAY_INVALID_RESPONSE",
-                "Invalid LiqPay response format.",
-                422
-            );
-
-        if (!parsed.TryGetValue("data", out var responseDataBase64))
-            throw new ApiException(
-                "LIQPAY_NO_DATA",
-                "LiqPay response does not contain data field.",
-                404
-            );
-
-        if (!parsed.TryGetValue("signature", out var responseSignature))
-            throw new ApiException(
-                "LIQPAY_NO_SIGNATURE",
-                "LiqPay response does not contain signature.",
-                404
-            );
+        var rawResponse = await PostLiqPayFormAsync(data, signature);
+        var (responseDataBase64, responseSignature) = ParseLiqPayResponseEnvelope(rawResponse);
 
         var expectedSignature = GenerateSignature(responseDataBase64);
         if (expectedSignature != responseSignature)
@@ -220,7 +168,7 @@ public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqP
         var decodedJson = Encoding.UTF8.GetString(
             Convert.FromBase64String(responseDataBase64));
 
-        var result = JsonSerializer.Deserialize<LiqPayStatusResponseDto>(decodedJson)
+        var result = JsonSerializer.Deserialize<LiqPayStatusResponseDto>(decodedJson, s_liqPayJson)
             ?? throw new ApiException(
                 "LIQPAY_INVALID_STATUS_PAYLOAD",
                 "Invalid LiqPay status payload.",
@@ -228,5 +176,67 @@ public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqP
             );
 
         return result;
+    }
+
+    /// <summary>LiqPay /api/request очікує form-urlencoded: data + signature (не JSON body).</summary>
+    private async Task<string> PostLiqPayFormAsync(string dataBase64, string signature)
+    {
+        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["data"] = dataBase64,
+            ["signature"] = signature
+        });
+
+        var response = await httpClient.PostAsync(LiqPayRequestUrl, content);
+
+        if (!response.IsSuccessStatusCode)
+            throw new ApiException(
+                "LIQPAY_HTTP_ERROR",
+                $"LiqPay HTTP error: {(int)response.StatusCode}",
+                (int)response.StatusCode
+            );
+
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    private static (string DataBase64, string Signature) ParseLiqPayResponseEnvelope(string rawResponse)
+    {
+        using var doc = JsonDocument.Parse(rawResponse);
+        var root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+            throw new ApiException("LIQPAY_INVALID_RESPONSE", "Invalid LiqPay response format.", 422);
+
+        string? data = null;
+        string? sig = null;
+        foreach (var p in root.EnumerateObject())
+        {
+            if (p.Name.Equals("data", StringComparison.OrdinalIgnoreCase))
+                data = p.Value.GetString();
+            else if (p.Name.Equals("signature", StringComparison.OrdinalIgnoreCase))
+                sig = p.Value.GetString();
+        }
+
+        if (string.IsNullOrEmpty(data) || string.IsNullOrEmpty(sig))
+        {
+            var err = TryGetLiqPayErrorDescription(root);
+            throw new ApiException(
+                "LIQPAY_NO_DATA",
+                err ?? "LiqPay response does not contain data/signature fields.",
+                422);
+        }
+
+        return (data, sig);
+    }
+
+    private static string? TryGetLiqPayErrorDescription(JsonElement root)
+    {
+        foreach (var p in root.EnumerateObject())
+        {
+            if (p.Name.Equals("err_description", StringComparison.OrdinalIgnoreCase))
+                return p.Value.GetString();
+            if (p.Name.Equals("err_code", StringComparison.OrdinalIgnoreCase))
+                return $"err_code: {p.Value.GetRawText()}";
+        }
+        return null;
     }
 }
