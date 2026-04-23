@@ -24,7 +24,10 @@ public class PaymentService(
         PropertyNameCaseInsensitive = true,
         NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
-
+    public async Task<LiqPayStatusResponseDto> GetPaymentStatusAsync(Guid paymentId)
+    {
+        return await liqPayService.GetPaymentStatusAsync(paymentId);
+    }
     public async Task<CreatePaymentResultDto> CreatePaymentAsync(
     Order order,
     TimeSpan payloadValidity,
@@ -204,10 +207,9 @@ public class PaymentService(
         var raw = liq.Status?.Trim().ToLowerInvariant();
         payment.Status = raw switch
         {
-            "success" or "sandbox" => PaymentStatus.Success,
+            "success" or "sandbox" or "pending" or "wait_accept" => PaymentStatus.Success,
             "failure" or "error" => PaymentStatus.Failure,
             "reversed" => PaymentStatus.Refunded,
-            "pending" or "wait_accept" => PaymentStatus.Pending,
             _ => PaymentStatus.Pending
         };
 

@@ -12,6 +12,8 @@ public interface IOrderItemReviewService
 
     Task DeleteReviewAsync(string userId, Guid reviewId);
 
+    Task DeleteReviewAsModeratorAsync(Guid reviewId);
+
     // Отримання
     Task<ReviewResponseDto> GetReviewByIdAsync(Guid reviewId);
 
@@ -31,4 +33,6 @@ public interface IOrderItemReviewService
     Task<ReviewResponseDto> RejectReviewAsync(Guid reviewId);
 
     Task<PagedResultDto<ReviewResponseDto>> GetPendingReviewsAsync(int page = 1, int pageSize = 20);
+
+    Task<PagedResultDto<ReviewResponseDto>> GetAllReviewsAsync(int page = 1, int pageSize = 20);
 }

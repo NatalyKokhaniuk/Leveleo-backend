@@ -44,22 +44,25 @@ public class DeliveryController : ControllerBase
         var delivery = await _deliveryService.GetDeliveryByTrackingNumberAsync(trackingNumber);
         return Ok(delivery);
     }
-
+    
     [HttpPost("create/{orderId:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<DeliveryResponseDto>> CreateDelivery(Guid orderId)
     {
         var delivery = await _deliveryService.CreateDeliveryAsync(orderId);
         return CreatedAtAction(nameof(GetDeliveryById), new { id = delivery.Id }, delivery);
     }
-
+    
     [HttpPatch("{deliveryId:guid}/status")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<ActionResult<DeliveryResponseDto>> UpdateDeliveryStatus(Guid deliveryId)
     {
         var updatedDelivery = await _deliveryService.UpdateDeliveryStatusAsync(deliveryId);
         return Ok(updatedDelivery);
     }
-
+   
     [HttpPost("{deliveryId:guid}/cancel")]
+    [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> CancelDelivery(Guid deliveryId)
     {
         var result = await _deliveryService.CancelDeliveryAsync(deliveryId);
@@ -71,5 +74,13 @@ public class DeliveryController : ControllerBase
     {
         var history = await _deliveryService.GetTrackingHistoryAsync(deliveryId);
         return Ok(history);
+    }
+    [HttpPost("create-manual/{orderId:guid}")]
+    [Authorize(Roles = "Admin,Moderator")]
+    public async Task<ActionResult<DeliveryResponseDto>> CreateDeliveryManual(
+    Guid orderId, [FromQuery] string trackingNumber)
+    {
+        var delivery = await _deliveryService.CreateDeliveryManualAsync(orderId, trackingNumber);
+        return CreatedAtAction(nameof(GetDeliveryById), new { id = delivery.Id }, delivery);
     }
 }

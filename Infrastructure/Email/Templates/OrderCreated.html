@@ -7,10 +7,24 @@
         
         <div style='background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;'>
             <p style='margin: 8px 0; font-size: 14px;'><strong>Номер замовлення:</strong> {{ORDER_NUMBER}}</p>
-            <p style='margin: 8px 0; font-size: 14px;'><strong>Сума до оплати:</strong> <span style='color: #2563eb; font-size: 18px; font-weight: bold;'>{{TOTAL_PAYABLE}}</span></p>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Статус замовлення:</strong> {{ORDER_STATUS}}</p>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Адреса доставки:</strong> {{DELIVERY_ADDRESS}}</p>
         </div>
-        
-        <p style='font-size: 15px; color: #444;'>Будь ласка, завершіть оплату для обробки замовлення.</p>
+
+        <div style='background: #ffffff; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+            <h2 style='margin: 0 0 12px 0; color: #1f2937; font-size: 18px;'>Склад замовлення</h2>
+            {{ORDER_ITEMS}}
+        </div>
+
+        <div style='background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+            <h2 style='margin: 0 0 12px 0; color: #1f2937; font-size: 18px;'>Підсумок</h2>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Сума без знижок:</strong> {{TOTAL_ORIGINAL}}</p>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Знижка на товари:</strong> {{TOTAL_PRODUCT_DISCOUNT}}</p>
+            <p style='margin: 8px 0; font-size: 14px;'><strong>Знижка кошика:</strong> {{TOTAL_CART_DISCOUNT}}</p>
+            <p style='margin: 12px 0 0 0; font-size: 15px;'><strong>Сума до оплати:</strong> <span style='color: #2563eb; font-size: 20px; font-weight: bold;'>{{TOTAL_PAYABLE}}</span></p>
+        </div>
+
+        <p style='font-size: 15px; color: #444;'>Будь ласка, завершіть оплату, щоб ми могли розпочати обробку вашого замовлення.</p>
         
         <div style='margin: 30px 0; text-align: center;'>
             <a href='{{ORDER_LINK}}' style='background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; display: inline-block;'>

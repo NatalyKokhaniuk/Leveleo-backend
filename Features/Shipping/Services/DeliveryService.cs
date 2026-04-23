@@ -221,7 +221,39 @@ public class DeliveryService(
 
         return await MapToDtoAsync(delivery);
     }
+    public async Task<DeliveryResponseDto> CreateDeliveryManualAsync(Guid orderId, string trackingNumber)
+    {
+        var order = await db.Orders
+            .Include(o => o.Address)
+            .Include(o => o.Delivery)
+            .FirstOrDefaultAsync(o => o.Id == orderId)
+            ?? throw new ApiException("ORDER_NOT_FOUND", "Order not found.", 404);
 
+        if (order.Status != OrderStatus.Processing)
+            throw new ApiException("INVALID_ORDER_STATUS", "Only processing orders can have delivery created.", 400);
+
+        if (order.Delivery != null)
+            throw new ApiException("DELIVERY_ALREADY_EXISTS", "Delivery already exists for this order.", 400);
+
+        var delivery = new Delivery
+        {
+            OrderId = orderId,
+            AddressId = order.AddressId,
+            TrackingNumber = trackingNumber,
+            Status = DeliveryStatus.Shipped,
+            EstimatedDeliveryDate = DateTimeOffset.UtcNow.AddDays(3),
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        db.Deliveries.Add(delivery);
+        order.DeliveryId = delivery.Id;
+        await db.SaveChangesAsync();
+
+        await orderService.NotifyDeliveryUpdated(orderId, DeliveryStatus.Shipped);
+
+        return await MapToDtoAsync(delivery);
+    }
     public async Task<bool> CancelDeliveryAsync(Guid deliveryId)
     {
         var delivery = await db.Deliveries
@@ -270,7 +302,7 @@ public class DeliveryService(
 
         return await novaPoshtaService.TrackParcelAsync(delivery.TrackingNumber);
     }
-
+    
     #region Helpers
 
     private async Task<DeliveryResponseDto> MapToDtoAsync(Delivery delivery)

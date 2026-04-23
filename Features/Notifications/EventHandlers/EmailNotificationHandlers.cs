@@ -3,6 +3,8 @@ using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
+using System.Text;
 
 namespace LeveLEO.Features.Notifications.EventHandlers;
 
@@ -23,7 +25,13 @@ public class OrderCreatedEmailHandler(
             var replacements = new Dictionary<string, string>
             {
                 { "{{ORDER_NUMBER}}", @event.OrderNumber },
-                { "{{TOTAL_PAYABLE}}", $"{@event.TotalPayable:C}" },
+                { "{{ORDER_STATUS}}", MapOrderStatus(@event.Status) },
+                { "{{DELIVERY_ADDRESS}}", @event.DeliveryAddress },
+                { "{{ORDER_ITEMS}}", BuildOrderItemsHtml(@event.Items) },
+                { "{{TOTAL_ORIGINAL}}", FormatCurrency(@event.TotalOriginalPrice) },
+                { "{{TOTAL_PRODUCT_DISCOUNT}}", FormatCurrency(@event.TotalProductDiscount) },
+                { "{{TOTAL_CART_DISCOUNT}}", FormatCurrency(@event.TotalCartDiscount) },
+                { "{{TOTAL_PAYABLE}}", FormatCurrency(@event.TotalPayable) },
                 { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
             };
 
@@ -37,6 +45,54 @@ public class OrderCreatedEmailHandler(
         {
             logger.LogError(ex, "Failed to send order created email for order {OrderId}", @event.OrderId);
         }
+    }
+
+    private static string BuildOrderItemsHtml(IReadOnlyCollection<OrderCreatedItemSnapshot> items)
+    {
+        if (items.Count == 0)
+            return "<p style='font-size: 14px; color: #555;'>Склад замовлення буде доступний у вашому кабінеті.</p>";
+
+        var sb = new StringBuilder();
+        sb.Append("<table style='width: 100%; border-collapse: collapse; margin-top: 10px;'>");
+        sb.Append("<thead><tr>");
+        sb.Append("<th style='text-align: left; font-size: 13px; color: #666; border-bottom: 1px solid #e5e7eb; padding: 8px 0;'>Товар</th>");
+        sb.Append("<th style='text-align: center; font-size: 13px; color: #666; border-bottom: 1px solid #e5e7eb; padding: 8px 0;'>К-сть</th>");
+        sb.Append("<th style='text-align: right; font-size: 13px; color: #666; border-bottom: 1px solid #e5e7eb; padding: 8px 0;'>Ціна</th>");
+        sb.Append("<th style='text-align: right; font-size: 13px; color: #666; border-bottom: 1px solid #e5e7eb; padding: 8px 0;'>Сума</th>");
+        sb.Append("</tr></thead><tbody>");
+
+        foreach (var item in items)
+        {
+            sb.Append("<tr>");
+            sb.Append($"<td style='padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #111827;'>{item.ProductName}</td>");
+            sb.Append($"<td style='padding: 10px 0; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 14px; color: #111827;'>{item.Quantity}</td>");
+            sb.Append($"<td style='padding: 10px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-size: 14px; color: #111827;'>{FormatCurrency(item.DiscountedUnitPrice)}</td>");
+            sb.Append($"<td style='padding: 10px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-size: 14px; color: #111827;'>{FormatCurrency(item.LineTotal)}</td>");
+            sb.Append("</tr>");
+        }
+
+        sb.Append("</tbody></table>");
+        return sb.ToString();
+    }
+
+    private static string MapOrderStatus(Features.Orders.Models.OrderStatus status)
+    {
+        return status switch
+        {
+            Features.Orders.Models.OrderStatus.Pending => "Очікує оплати",
+            Features.Orders.Models.OrderStatus.Processing => "В обробці",
+            Features.Orders.Models.OrderStatus.Shipped => "Відправлено",
+            Features.Orders.Models.OrderStatus.Completed => "Завершено",
+            Features.Orders.Models.OrderStatus.Cancelled => "Скасовано",
+            Features.Orders.Models.OrderStatus.PaymentFailed => "Помилка оплати",
+            _ => status.ToString()
+        };
+    }
+
+    private static string FormatCurrency(decimal amount)
+    {
+        var culture = CultureInfo.GetCultureInfo("uk-UA");
+        return $"{amount.ToString("N2", culture)} грн";
     }
 }
 

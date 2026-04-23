@@ -209,22 +209,31 @@ public class StatisticsService(AppDbContext db) : IStatisticsService
 
         var lowStockProducts = await db.Products
             .Where(p => p.IsActive && p.StockQuantity > 0 && p.StockQuantity <= 5)
-            .CountAsync();
+            .Select(p => new StockAlertProductDto { Id = p.Id, Name = p.Name, StockQuantity = p.StockQuantity })
+            .ToListAsync();
 
         var outOfStockProducts = await db.Products
             .Where(p => p.IsActive && p.StockQuantity == 0)
-            .CountAsync();
+            .Select(p => new StockAlertProductDto { Id = p.Id, Name = p.Name, StockQuantity = p.StockQuantity })
+            .ToListAsync();
 
         var pendingReviews = await db.OrderItemReviews
             .Where(r => !r.IsApproved)
-            .CountAsync();
+            .Select(r => new PendingReviewDto
+            {
+                Id = r.Id,
+                ProductId = r.OrderItem.ProductId,
+                UserId = r.OrderItem.Order.UserId,
+                CreatedAt = r.CreatedAt
+            })
+            .ToListAsync();
 
         return new DashboardStatsDto
         {
             TotalOrders = allOrders.Count,
-            TotalRevenue = allOrders.Where(o => o.Status == OrderStatus.Completed).Sum(o => o.TotalPayable),
+            TotalRevenue = allOrders.Where(o => o.Status == OrderStatus.Completed || o.Status == OrderStatus.Shipped).Sum(o => o.TotalPayable),
             TodayOrders = todayOrders.Count,
-            TodayRevenue = todayOrders.Where(o => o.Status == OrderStatus.Completed).Sum(o => o.TotalPayable),
+            TodayRevenue = todayOrders.Where(o => o.Status == OrderStatus.Completed || o.Status == OrderStatus.Shipped).Sum(o => o.TotalPayable),
             PendingOrders = allOrders.Count(o => o.Status == OrderStatus.Pending),
             ProcessingOrders = allOrders.Count(o => o.Status == OrderStatus.Processing),
             ShippedOrders = allOrders.Count(o => o.Status == OrderStatus.Shipped),

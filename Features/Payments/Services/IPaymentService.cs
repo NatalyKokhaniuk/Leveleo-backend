@@ -23,4 +23,5 @@ public interface IPaymentService
     Task RefundPaymentAsync(Guid paymentId, decimal? amount = null, string? reason = null);
 
     LiqPayStatusResponseDto VerifyCallback(string data, string signature);
+    Task<LiqPayStatusResponseDto> GetPaymentStatusAsync(Guid paymentId);
 }

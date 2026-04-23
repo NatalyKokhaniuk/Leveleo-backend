@@ -25,4 +25,5 @@ public interface IDeliveryService
 
     // Отримання історії трекінгу
     Task<List<TrackingEventDto>> GetTrackingHistoryAsync(Guid deliveryId);
+    Task<DeliveryResponseDto> CreateDeliveryManualAsync(Guid orderId, string trackingNumber);
 }

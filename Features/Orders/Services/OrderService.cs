@@ -289,6 +289,12 @@ public class OrderService(
                 .Where(u => u.Id == userId)
                 .Select(u => u.Email)
                 .FirstOrDefaultAsync();
+            var deliveryAddress = await db.Addresses
+                .AsNoTracking()
+                .Where(a => a.Id == orderCreateDto.UserAddressId)
+                .Select(a => BuildDeliveryAddress(a))
+                .FirstOrDefaultAsync()
+                ?? "Адресу доставки не вказано";
 
             await eventBus.PublishAsync(new OrderCreatedEvent
             {
@@ -296,7 +302,20 @@ public class OrderService(
                 OrderNumber = order.Number,
                 UserId = order.UserId,
                 UserEmail = userEmail!,
-                TotalPayable = order.TotalPayable
+                Status = order.Status,
+                TotalPayable = order.TotalPayable,
+                TotalOriginalPrice = order.TotalOriginalPrice,
+                TotalProductDiscount = order.TotalProductDiscount,
+                TotalCartDiscount = order.TotalCartDiscount,
+                DeliveryAddress = deliveryAddress,
+                Items = [.. cart.Items.Select(ci => new OrderCreatedItemSnapshot
+                {
+                    ProductName = ci.Product.Name,
+                    Quantity = ci.Quantity,
+                    UnitPrice = ci.Price,
+                    DiscountedUnitPrice = ci.PriceAfterCartPromotion,
+                    LineTotal = ci.TotalPrice
+                })]
             });
 
             _ = Task.Run(async () =>
@@ -708,6 +727,25 @@ public class OrderService(
                         await tx.RollbackAsync();
                         return;
                     }
+                    // Перед тим як скасовувати — питаємо LiqPay
+                    try
+                    {
+                        var liqStatus = await paymentService.GetPaymentStatusAsync(paymentEntity.Id);
+                        if (liqStatus.Status?.Trim().ToLowerInvariant() is "sandbox" or "success")
+                        {
+                            // Платіж насправді успішний — не скасовуємо, підміняємо статус
+                            paymentEntity.Status = PaymentStatus.Success;
+                            await db.SaveChangesAsync();
+                            await tx.CommitAsync();
+                            await NotifyPaymentUpdated(paymentEntity.Id);
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "LiqPay status check failed before abandon for payment {PaymentId}, proceeding with cancel.", paymentEntity.Id);
+                        // якщо LiqPay недоступний — скасовуємо як раніше
+                    }
 
                     order.PaymentId = null;
                     order.Status = OrderStatus.Cancelled;
@@ -750,5 +788,22 @@ public class OrderService(
         }
 
         await paymentService.GetPaymentByIdAsync(order.PaymentId.Value);
+    }
+
+    private static string BuildDeliveryAddress(Address address)
+    {
+        return address.DeliveryType switch
+        {
+            DeliveryType.Warehouse =>
+                $"{address.CityName ?? "Місто не вказано"}, відділення №{address.WarehouseNumber ?? "?"}" +
+                (string.IsNullOrWhiteSpace(address.WarehouseDescription) ? "" : $" ({address.WarehouseDescription})"),
+            DeliveryType.Doors =>
+                $"{address.CityName ?? "Місто не вказано"}, {address.Street ?? "Вулицю не вказано"} {address.House ?? ""}" +
+                (string.IsNullOrWhiteSpace(address.Flat) ? "" : $", кв. {address.Flat}"),
+            DeliveryType.Postomat =>
+                $"{address.CityName ?? "Місто не вказано"}, поштомат" +
+                (string.IsNullOrWhiteSpace(address.PostomatDescription) ? "" : $" ({address.PostomatDescription})"),
+            _ => address.CityName ?? "Адресу доставки не вказано"
+        };
     }
 }

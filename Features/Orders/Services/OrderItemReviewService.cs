@@ -49,11 +49,11 @@ public class OrderItemReviewService(
             );
         }
 
-        if (orderItem.Order.Status != OrderStatus.Completed)
+        if (orderItem.Order.Status != OrderStatus.Completed&& orderItem.Order.Status != OrderStatus.Shipped)
         {
             throw new ApiException(
                 "ORDER_NOT_COMPLETED",
-                "You can only review completed orders.",
+                "You can only review shipped or completed orders.",
                 400
             );
         }
@@ -233,7 +233,25 @@ public class OrderItemReviewService(
 
     public async Task DeleteReviewAsync(string userId, Guid reviewId)
     {
-        var review = await db.OrderItemReviews
+        var review = await LoadReviewWithMediaForDeleteAsync(reviewId);
+
+        if (review.OrderItem.Order.UserId != userId)
+        {
+            throw new ApiException("FORBIDDEN", "You can only delete your own reviews.", 403);
+        }
+
+        await DeleteReviewCoreAsync(review);
+    }
+
+    public async Task DeleteReviewAsModeratorAsync(Guid reviewId)
+    {
+        var review = await LoadReviewWithMediaForDeleteAsync(reviewId);
+        await DeleteReviewCoreAsync(review);
+    }
+
+    private async Task<OrderItemReview> LoadReviewWithMediaForDeleteAsync(Guid reviewId)
+    {
+        return await db.OrderItemReviews
             .Include(r => r.OrderItem)
                 .ThenInclude(oi => oi.Order)
             .Include(r => r.Photos)
@@ -244,12 +262,10 @@ public class OrderItemReviewService(
                 $"Review with Id '{reviewId}' not found.",
                 404
             );
+    }
 
-        if (review.OrderItem.Order.UserId != userId)
-        {
-            throw new ApiException("FORBIDDEN", "You can only delete your own reviews.", 403);
-        }
-
+    private async Task DeleteReviewCoreAsync(OrderItemReview review)
+    {
         foreach (var photo in review.Photos)
         {
             await mediaService.DeleteFileAsync(photo.PhotoKey);
@@ -442,6 +458,31 @@ public class OrderItemReviewService(
             .Include(r => r.Videos)
             .Where(r => !r.IsApproved)
             .OrderBy(r => r.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+
+        var reviews = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResultDto<ReviewResponseDto>
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            Items = [.. reviews.Select(MapToDto)]
+        };
+    }
+
+    public async Task<PagedResultDto<ReviewResponseDto>> GetAllReviewsAsync(int page = 1, int pageSize = 20)
+    {
+        var query = db.OrderItemReviews
+            .Include(r => r.OrderItem)
+                .ThenInclude(oi => oi.Product)
+            .Include(r => r.Photos)
+            .Include(r => r.Videos)
+            .OrderByDescending(r => r.CreatedAt);
 
         var totalCount = await query.CountAsync();
 

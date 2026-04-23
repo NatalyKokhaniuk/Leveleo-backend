@@ -11,8 +11,23 @@ public class OrderCreatedEvent : IEvent
     public string OrderNumber { get; init; } = null!;
     public string UserId { get; init; } = null!;
     public string UserEmail { get; init; } = null!;
+    public OrderStatus Status { get; init; }
     public decimal TotalPayable { get; init; }
+    public decimal TotalOriginalPrice { get; init; }
+    public decimal TotalProductDiscount { get; init; }
+    public decimal TotalCartDiscount { get; init; }
+    public string DeliveryAddress { get; init; } = null!;
+    public List<OrderCreatedItemSnapshot> Items { get; init; } = [];
     public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
+
+public class OrderCreatedItemSnapshot
+{
+    public string ProductName { get; init; } = null!;
+    public int Quantity { get; init; }
+    public decimal UnitPrice { get; init; }
+    public decimal DiscountedUnitPrice { get; init; }
+    public decimal LineTotal { get; init; }
 }
 
 /// <summary>

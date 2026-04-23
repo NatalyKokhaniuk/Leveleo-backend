@@ -42,14 +42,22 @@ public class ReviewsController(IOrderItemReviewService reviewService) : Controll
     }
 
     /// <summary>
-    /// Видалити свій відгук
+    /// Видалити відгук: власник — свій відгук; Admin/Moderator — будь-який (у т.ч. схвалений)
     /// </summary>
     [HttpDelete("{reviewId:guid}")]
     [Authorize]
     public async Task<IActionResult> DeleteReview(Guid reviewId)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        await reviewService.DeleteReviewAsync(userId, reviewId);
+        if (User.IsInRole("Admin") || User.IsInRole("Moderator"))
+        {
+            await reviewService.DeleteReviewAsModeratorAsync(reviewId);
+        }
+        else
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            await reviewService.DeleteReviewAsync(userId, reviewId);
+        }
+
         return NoContent();
     }
 
@@ -192,7 +200,7 @@ public class ReviewsController(IOrderItemReviewService reviewService) : Controll
 
     /// <summary>
     /// Отримати всі не схвалені відгуки (для модерації)
-    /// Доступно: тільки адміністратори
+    /// Доступно: Admin, Moderator
     /// </summary>
     [HttpGet("pending")]
     [Authorize(Roles = "Admin,Moderator")]
@@ -201,6 +209,20 @@ public class ReviewsController(IOrderItemReviewService reviewService) : Controll
         [FromQuery] int pageSize = 20)
     {
         var result = await reviewService.GetPendingReviewsAsync(page, pageSize);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Отримати всі відгуки (схвалені та на модерації), найновіші спочатку
+    /// Доступно: Admin, Moderator
+    /// </summary>
+    [HttpGet("admin/all")]
+    [Authorize(Roles = "Admin,Moderator")]
+    public async Task<ActionResult<PagedResultDto<ReviewResponseDto>>> GetAllReviews(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await reviewService.GetAllReviewsAsync(page, pageSize);
         return Ok(result);
     }
 

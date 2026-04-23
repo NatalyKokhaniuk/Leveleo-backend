@@ -81,9 +81,29 @@ public class DashboardStatsDto
     public int ProcessingOrders { get; set; }
     public int ShippedOrders { get; set; }
     public int CompletedOrders { get; set; }
-    public int LowStockProducts { get; set; }
-    public int OutOfStockProducts { get; set; }
-    public int PendingReviews { get; set; }
+
+    public List<StockAlertProductDto> LowStockProducts { get; set; } = [];
+    public List<StockAlertProductDto> OutOfStockProducts { get; set; } = [];
+    public List<PendingReviewDto> PendingReviews { get; set; } = [];
+
+    // Зручні лічильники для фронтенду — не треба робити .length окремо
+    public int LowStockCount => LowStockProducts.Count;
+    public int OutOfStockCount => OutOfStockProducts.Count;
+    public int PendingReviewsCount => PendingReviews.Count;
+}
+public class StockAlertProductDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public int StockQuantity { get; set; }
+}
+
+public class PendingReviewDto
+{
+    public Guid Id { get; set; }
+    public Guid ProductId { get; set; }
+    public string UserId { get; set; } = null!;
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 /// <summary>
