@@ -22,5 +22,12 @@ public class AppliedPromotionDto
 
     public bool IsPersonal { get; set; } = false;
     public string? CouponCode { get; set; }
+
+    /// <summary>Глобальний ліміт (null = без обмеження), актуально для купонних акцій.</summary>
+    public int? MaxUsages { get; set; }
+
+    /// <summary>Скільки разів купон уже використано (успішні оплати).</summary>
+    public int UsedCount { get; set; }
+
     public ICollection<PromotionTranslationDto> Translations { get; set; } = [];
 }

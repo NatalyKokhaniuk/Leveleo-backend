@@ -27,5 +27,14 @@ public class PromotionResponseDto
     public bool IsCoupon { get; set; }
     public bool IsPersonal { get; set; }
 
+    /// <summary>Лише для Admin/Moderator у відповіді; для публічних запитів не повертається.</summary>
+    public string? CouponCode { get; set; }
+
+    /// <summary>Глобальний ліміт використань купона (null = без обмеження).</summary>
+    public int? MaxUsages { get; set; }
+
+    /// <summary>Кількість успішних оплат з цим купоном (глобальний лічильник).</summary>
+    public int UsedCount { get; set; }
+
     public ICollection<PromotionTranslationDto> Translations { get; set; } = [];
 }

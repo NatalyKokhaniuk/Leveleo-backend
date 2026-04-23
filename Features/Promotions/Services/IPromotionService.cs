@@ -14,11 +14,12 @@ public interface IPromotionService
 
     Task DeleteAsync(Guid id);
 
-    Task<PromotionResponseDto> GetByIdAsync(Guid id);
+    Task<PromotionResponseDto> GetByIdAsync(Guid id, bool includeSensitiveCouponFields = false);
 
-    Task<PromotionResponseDto> GetBySlugAsync(string slug);
+    Task<PromotionResponseDto> GetBySlugAsync(string slug, bool includeSensitiveCouponFields = false);
 
-    Task<List<PromotionResponseDto>> GetActiveAsync();
+    /// <param name="guestEligibleOnly">Якщо true — лише акції без купона та не персональні (доступні будь-кому, у т.ч. без реєстрації).</param>
+    Task<List<PromotionResponseDto>> GetActiveAsync(bool guestEligibleOnly = false);
 
     Task<List<PromotionResponseDto>> GetAllAsync();
 
@@ -35,6 +36,9 @@ public interface IPromotionService
     IEnumerable<ShoppingCartItemDto> items,
     string? couponCode = null,
     string? userId = null);
+
+    /// <summary>Після успішної оплати: збільшити UsedCount акції та/або UsageCount персонального призначення.</summary>
+    Task RecordAppliedCartPromotionUsageAsync(Guid? appliedCartPromotionId, string userId);
 
     //===== TRANSLATIONS =====
     Task<PromotionTranslationDto> AddTranslationAsync(Guid promotionId, PromotionTranslationDto dto);

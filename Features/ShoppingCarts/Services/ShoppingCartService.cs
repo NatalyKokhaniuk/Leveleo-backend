@@ -66,6 +66,8 @@ public class ShoppingCartService(
             TotalCartDiscount = promoResult.TotalCartDiscount,
             TotalPayable = promoResult.FinalPrice,
             AppliedCartPromotion = promoResult.AppliedCartPromotion,
+            CouponApplyResult = promoResult.CouponResult,
+            CouponApplyMessage = promoResult.Message,
             RemovedItems = removedItems,
             CartAdjusted = CartAdjusted
         };

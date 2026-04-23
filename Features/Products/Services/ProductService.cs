@@ -426,6 +426,8 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 IsCoupon = promotion.IsCoupon,
                 IsPersonal = promotion.IsPersonal,
                 CouponCode = promotion.CouponCode,
+                MaxUsages = promotion.MaxUsages,
+                UsedCount = promotion.UsedCount,
                 Translations = [.. promotion.Translations
                 .Select(t => new PromotionTranslationDto
                 {
@@ -518,6 +520,8 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                     IsCoupon = promotion.IsCoupon,
                     IsPersonal = promotion.IsPersonal,
                     CouponCode = promotion.CouponCode,
+                    MaxUsages = promotion.MaxUsages,
+                    UsedCount = promotion.UsedCount,
                     Translations = [.. promotion.Translations
                     .Select(t => new PromotionTranslationDto
                     {

@@ -23,6 +23,10 @@ public class Order : ITimestamped
     public decimal TotalCartDiscount { get; set; } = 0.00m;
 
     public decimal TotalPayable { get; set; }
+
+    /// <summary>Застосована акція рівня кошика на момент оформлення (для нарахування використань купона після оплати).</summary>
+    public Guid? AppliedCartPromotionId { get; set; }
+
     public Guid? DeliveryId { get; set; }
     public Delivery? Delivery { get; set; }
     public ApplicationUser User { get; set; } = null!;

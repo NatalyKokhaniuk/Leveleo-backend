@@ -65,10 +65,10 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             EndDate = promotion.EndDate,
             CouponCode = promotion.CouponCode
         });
-        return MapToDto(promotion);
+        return MapToDto(promotion, includeSensitiveCouponFields: true);
     }
 
-    public async Task<PromotionResponseDto> GetBySlugAsync(string slug)
+    public async Task<PromotionResponseDto> GetBySlugAsync(string slug, bool includeSensitiveCouponFields = false)
     {
         var promotion = await _db.Promotions
             .Include(p => p.Translations)
@@ -76,7 +76,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             ?? throw new ApiException("PROMOTION_NOT_FOUND",
                 $"Promotion with slug '{slug}' not found.", 404);
 
-        return MapToDto(promotion);
+        return MapToDto(promotion, includeSensitiveCouponFields);
     }
 
     public async Task<PromotionResponseDto> UpdateAsync(Guid id, UpdatePromotionDto dto)
@@ -133,10 +133,10 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
 
         await _db.SaveChangesAsync();
 
-        return MapToDto(promotion);
+        return MapToDto(promotion, includeSensitiveCouponFields: true);
     }
 
-    private static PromotionResponseDto MapToDto(Promotion p)
+    private static PromotionResponseDto MapToDto(Promotion p, bool includeSensitiveCouponFields)
     {
         return new PromotionResponseDto
         {
@@ -155,6 +155,9 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             IsActive = p.IsActive,
             IsCoupon = p.IsCoupon,
             IsPersonal = p.IsPersonal,
+            CouponCode = includeSensitiveCouponFields ? p.CouponCode : null,
+            MaxUsages = includeSensitiveCouponFields ? p.MaxUsages : null,
+            UsedCount = includeSensitiveCouponFields ? p.UsedCount : 0,
             Translations = [.. p.Translations.Select(t => new PromotionTranslationDto
             {
                 LanguageCode = t.LanguageCode,
@@ -164,7 +167,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         };
     }
 
-    public async Task<PromotionResponseDto> GetByIdAsync(Guid id)
+    public async Task<PromotionResponseDto> GetByIdAsync(Guid id, bool includeSensitiveCouponFields = false)
     {
         var promotion = await _db.Promotions
                 .Include(p => p.Translations)
@@ -172,39 +175,36 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 ?? throw new ApiException("PROMOTION_NOT_FOUND",
                     $"Promotion with id '{id}' not found.", 404);
 
-        return MapToDto(promotion);
+        return MapToDto(promotion, includeSensitiveCouponFields);
     }
 
-    public async Task<List<PromotionResponseDto>> GetActiveAsync()
+    public async Task<List<PromotionResponseDto>> GetActiveAsync(bool guestEligibleOnly = false)
     {
-        var promotions = await _db.Promotions
-        .Where(p => p.StartDate <= DateTime.UtcNow &&
-            p.EndDate >= DateTime.UtcNow)
-        .ToListAsync();
+        var now = DateTimeOffset.UtcNow;
+        var query = _db.Promotions
+            .Where(p => p.StartDate <= now && p.EndDate >= now);
 
-        return [.. promotions.Select(p => new PromotionResponseDto
+        if (guestEligibleOnly)
         {
-            Id = p.Id,
-            Slug = p.Slug,
-            StartDate = p.StartDate,
-            EndDate = p.EndDate,
-            IsActive = p.IsActive
-        })];
+            query = query.Where(p => !p.IsCoupon && !p.IsPersonal);
+        }
+
+        var promotions = await query
+            .Include(p => p.Translations)
+            .OrderByDescending(p => p.StartDate)
+            .ToListAsync();
+
+        return [.. promotions.Select(p => MapToDto(p, includeSensitiveCouponFields: false))];
     }
 
     public async Task<List<PromotionResponseDto>> GetAllAsync()
     {
         var promotions = await _db.Promotions
-        .ToListAsync();
+            .Include(p => p.Translations)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
 
-        return [.. promotions.Select(p => new PromotionResponseDto
-        {
-            Id = p.Id,
-            Slug = p.Slug,
-            StartDate = p.StartDate,
-            EndDate = p.EndDate,
-            IsActive = p.IsActive
-        })];
+        return [.. promotions.Select(p => MapToDto(p, includeSensitiveCouponFields: true))];
     }
 
     public async Task DeleteAsync(Guid id)
@@ -311,11 +311,22 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
 
         if (!string.IsNullOrWhiteSpace(couponCode))
         {
-            couponPromotion = cartPromotions.FirstOrDefault(p => p.IsCoupon && p.CouponCode == couponCode);
+            var normalizedCoupon = couponCode.Trim();
+            couponPromotion = cartPromotions.FirstOrDefault(p =>
+                p.IsCoupon &&
+                !string.IsNullOrEmpty(p.CouponCode) &&
+                string.Equals(p.CouponCode.Trim(), normalizedCoupon, StringComparison.OrdinalIgnoreCase));
 
             if (couponPromotion == null)
             {
                 couponResult = ApplyCouponResult.Invalid;
+                result.Message = "Купон не знайдено або не діє для поточного кошика.";
+            }
+            else if (couponPromotion.MaxUsages.HasValue && couponPromotion.UsedCount >= couponPromotion.MaxUsages.Value)
+            {
+                couponResult = ApplyCouponResult.UsageLimitExceeded;
+                couponPromotion = null;
+                result.Message = "Ліміт використань цього купона вичерпано.";
             }
             else if (couponPromotion.IsPersonal)
             {
@@ -323,20 +334,22 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 {
                     couponResult = ApplyCouponResult.NotEligible;
                     couponPromotion = null;
+                    result.Message = "Цей купон доступний лише для авторизованих користувачів.";
                 }
                 else
                 {
                     var assignment = await _db.CouponAssignments
                         .FirstOrDefaultAsync(ca =>
-                            ca.PromotionId == couponPromotion.Id &&
+                            ca.PromotionId == couponPromotion!.Id &&
                             ca.UserId == userId &&
-                            (!ca.ExpiresAt.HasValue || ca.ExpiresAt > now) &&
+                            (!ca.ExpiresAt.HasValue || ca.ExpiresAt >= now) &&
                             (ca.MaxUsagePerUser == null || ca.UsageCount < ca.MaxUsagePerUser));
 
                     if (assignment == null)
                     {
                         couponResult = ApplyCouponResult.NotEligible;
                         couponPromotion = null;
+                        result.Message = "Купон не призначено вам, прострочено або вичерпано ліміт використань.";
                     }
                 }
             }
@@ -440,6 +453,8 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 IsCoupon = applied.IsCoupon,
                 IsPersonal = applied.IsPersonal,
                 CouponCode = applied.CouponCode,
+                MaxUsages = applied.MaxUsages,
+                UsedCount = applied.UsedCount,
                 Translations = [.. applied.Translations
                     .Select(t => new PromotionTranslationDto
                     {
@@ -470,6 +485,51 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         result.CouponResult = couponResult;
 
         return result;
+    }
+
+    public async Task RecordAppliedCartPromotionUsageAsync(Guid? appliedCartPromotionId, string userId)
+    {
+        if (appliedCartPromotionId is not { } promoId)
+            return;
+
+        var promo = await _db.Promotions.AsNoTracking()
+            .Where(p => p.Id == promoId)
+            .Select(p => new { p.IsCoupon, p.IsPersonal })
+            .FirstOrDefaultAsync();
+
+        if (promo is not { IsCoupon: true })
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+
+        var promotionRows = await _db.Promotions
+            .Where(p => p.Id == promoId && (!p.MaxUsages.HasValue || p.UsedCount < p.MaxUsages.Value))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.UsedCount, p => p.UsedCount + 1)
+                .SetProperty(p => p.UpdatedAt, _ => now));
+
+        if (promotionRows == 0)
+            return;
+
+        if (!promo.IsPersonal)
+            return;
+
+        var assignmentRows = await _db.CouponAssignments
+            .Where(ca => ca.PromotionId == promoId && ca.UserId == userId
+                && (!ca.ExpiresAt.HasValue || ca.ExpiresAt >= now)
+                && (ca.MaxUsagePerUser == null || ca.UsageCount < ca.MaxUsagePerUser))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(ca => ca.UsageCount, ca => ca.UsageCount + 1)
+                .SetProperty(ca => ca.UpdatedAt, _ => now));
+
+        if (assignmentRows == 0)
+        {
+            await _db.Promotions
+                .Where(p => p.Id == promoId && p.UsedCount > 0)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(p => p.UsedCount, p => p.UsedCount - 1)
+                    .SetProperty(p => p.UpdatedAt, _ => now));
+        }
     }
 
     #endregion CART LEVEL LOGIC

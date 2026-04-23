@@ -10,6 +10,12 @@ public class ShoppingCartDto
     public string? CouponCode { get; set; }
     public AppliedPromotionDto? AppliedCartPromotion { get; set; } // Акція рівня кошика, якщо застосована
 
+    /// <summary>Результат перевірки купона (для UI повідомлень).</summary>
+    public ApplyCouponResult CouponApplyResult { get; set; }
+
+    /// <summary>Детальне пояснення для купона (наприклад, ліміт використань).</summary>
+    public string? CouponApplyMessage { get; set; }
+
     public List<ShoppingCartItemDto> Items { get; set; } = [];
     public List<ShoppingCartItemDto> RemovedItems { get; set; } = [];
     public bool CartAdjusted { get; set; }

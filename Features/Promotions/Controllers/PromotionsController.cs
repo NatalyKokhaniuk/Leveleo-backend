@@ -12,6 +12,10 @@ namespace LeveLEO.Features.Promotions.Controllers;
 [Route("api/[controller]")]
 public class PromotionsController(IPromotionService service) : ControllerBase
 {
+    private bool IncludeSensitiveCouponFields =>
+        User.Identity?.IsAuthenticated == true &&
+        (User.IsInRole("Admin") || User.IsInRole("Moderator"));
+
     #region CRUD
 
     [HttpPost]
@@ -23,16 +27,18 @@ public class PromotionsController(IPromotionService service) : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     public async Task<ActionResult<PromotionResponseDto>> GetById(Guid id)
     {
-        var result = await service.GetByIdAsync(id);
+        var result = await service.GetByIdAsync(id, IncludeSensitiveCouponFields);
         return Ok(result);
     }
 
     [HttpGet("slug/{slug}")]
+    [AllowAnonymous]
     public async Task<ActionResult<PromotionResponseDto>> GetBySlug(string slug)
     {
-        var result = await service.GetBySlugAsync(slug);
+        var result = await service.GetBySlugAsync(slug, IncludeSensitiveCouponFields);
         return Ok(result);
     }
 
@@ -52,10 +58,15 @@ public class PromotionsController(IPromotionService service) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Активні акції за датами. Без авторизації.
+    /// <paramref name="guestEligibleOnly"/> = true — тільки такі, що не потребують купона та не персональні (для гостей і вітрини).
+    /// </summary>
     [HttpGet("active")]
-    public async Task<ActionResult<List<PromotionResponseDto>>> GetActive()
+    [AllowAnonymous]
+    public async Task<ActionResult<List<PromotionResponseDto>>> GetActive([FromQuery] bool guestEligibleOnly = false)
     {
-        var result = await service.GetActiveAsync();
+        var result = await service.GetActiveAsync(guestEligibleOnly);
         return Ok(result);
     }
 
@@ -96,16 +107,18 @@ public class PromotionsController(IPromotionService service) : ControllerBase
     }
 
     [HttpGet("{promotionId:guid}/translations")]
+    [AllowAnonymous]
     public async Task<ActionResult<List<PromotionTranslationDto>>> GetTranslations(Guid promotionId)
     {
-        var promotion = await service.GetByIdAsync(promotionId); // для повного об’єкту з перекладами
+        var promotion = await service.GetByIdAsync(promotionId, IncludeSensitiveCouponFields);
         return Ok(promotion.Translations);
     }
 
     [HttpGet("{promotionId:guid}/translations/{languageCode}")]
+    [AllowAnonymous]
     public async Task<ActionResult<PromotionTranslationDto>> GetTranslationById(Guid promotionId, string languageCode)
     {
-        var promotion = await service.GetByIdAsync(promotionId);
+        var promotion = await service.GetByIdAsync(promotionId, IncludeSensitiveCouponFields);
         var normalizedLanguageCode = languageCode.Trim().ToLowerInvariant();
         var translation = promotion.Translations.FirstOrDefault(t => t.LanguageCode.ToLowerInvariant() == normalizedLanguageCode);
         if (translation == null)

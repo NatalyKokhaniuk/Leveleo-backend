@@ -11,6 +11,7 @@ using LeveLEO.Features.Products.Services;
 using LeveLEO.Features.Shipping.DTO;
 using LeveLEO.Features.Shipping.Models;
 using LeveLEO.Features.Shipping.Services;
+using LeveLEO.Features.Promotions.Services;
 using LeveLEO.Features.ShoppingCarts;
 using LeveLEO.Features.ShoppingCarts.DTO;
 using LeveLEO.Features.ShoppingCarts.Services;
@@ -31,6 +32,7 @@ public class OrderService(
     IPaymentService paymentService,
     IProductService productService,
     IAddressService addressService,
+    IPromotionService promotionService,
     IEventBus eventBus,
     ILogger<OrderService> logger) : IOrderService
 {
@@ -244,6 +246,7 @@ public class OrderService(
                     TotalProductDiscount = cart.TotalProductDiscount,
                     TotalCartDiscount = cart.TotalCartDiscount,
                     TotalPayable = cart.TotalPayable,
+                    AppliedCartPromotionId = cart.AppliedCartPromotion?.Id,
                 };
 
                 order.OrderItems = [.. cart.Items.Select(ci => new OrderItem
@@ -379,6 +382,10 @@ public class OrderService(
                             {
                                 await inventoryService.ConfirmReservationAsync(item.ProductId, order.Id);
                             }
+
+                            await promotionService.RecordAppliedCartPromotionUsageAsync(
+                                order.AppliedCartPromotionId,
+                                order.UserId);
 
                             await cartService.ClearCartAsync(order.UserId);
 
