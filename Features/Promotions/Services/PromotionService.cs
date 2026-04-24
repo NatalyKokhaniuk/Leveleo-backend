@@ -487,23 +487,26 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         return result;
     }
 
-    public async Task RecordAppliedCartPromotionUsageAsync(Guid? appliedCartPromotionId, string userId)
+    public async Task RecordPromotionUsageByCouponAsync(string? couponCode, string userId)
     {
-        if (appliedCartPromotionId is not { } promoId)
+        if (string.IsNullOrWhiteSpace(couponCode))
             return;
 
+        var normalizedCoupon = couponCode.Trim();
         var promo = await _db.Promotions.AsNoTracking()
-            .Where(p => p.Id == promoId)
-            .Select(p => new { p.IsCoupon, p.IsPersonal })
+            .Where(p => p.IsCoupon && p.CouponCode != null &&
+                        string.Equals(p.CouponCode.Trim(), normalizedCoupon, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.StartDate)
+            .Select(p => new { p.Id, p.IsPersonal })
             .FirstOrDefaultAsync();
 
-        if (promo is not { IsCoupon: true })
+        if (promo == null)
             return;
 
         var now = DateTimeOffset.UtcNow;
 
         var promotionRows = await _db.Promotions
-            .Where(p => p.Id == promoId && (!p.MaxUsages.HasValue || p.UsedCount < p.MaxUsages.Value))
+            .Where(p => p.Id == promo.Id && (!p.MaxUsages.HasValue || p.UsedCount < p.MaxUsages.Value))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.UsedCount, p => p.UsedCount + 1)
                 .SetProperty(p => p.UpdatedAt, _ => now));
@@ -515,7 +518,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             return;
 
         var assignmentRows = await _db.CouponAssignments
-            .Where(ca => ca.PromotionId == promoId && ca.UserId == userId
+            .Where(ca => ca.PromotionId == promo.Id && ca.UserId == userId
                 && (!ca.ExpiresAt.HasValue || ca.ExpiresAt >= now)
                 && (ca.MaxUsagePerUser == null || ca.UsageCount < ca.MaxUsagePerUser))
             .ExecuteUpdateAsync(s => s
@@ -525,7 +528,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         if (assignmentRows == 0)
         {
             await _db.Promotions
-                .Where(p => p.Id == promoId && p.UsedCount > 0)
+                .Where(p => p.Id == promo.Id && p.UsedCount > 0)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(p => p.UsedCount, p => p.UsedCount - 1)
                     .SetProperty(p => p.UpdatedAt, _ => now));

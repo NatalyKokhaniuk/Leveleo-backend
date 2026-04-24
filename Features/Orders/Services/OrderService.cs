@@ -8,10 +8,10 @@ using LeveLEO.Features.Payments.Models;
 using LeveLEO.Features.Payments.Services;
 using LeveLEO.Features.Products.DTO;
 using LeveLEO.Features.Products.Services;
+using LeveLEO.Features.Promotions.Services;
 using LeveLEO.Features.Shipping.DTO;
 using LeveLEO.Features.Shipping.Models;
 using LeveLEO.Features.Shipping.Services;
-using LeveLEO.Features.Promotions.Services;
 using LeveLEO.Features.ShoppingCarts;
 using LeveLEO.Features.ShoppingCarts.DTO;
 using LeveLEO.Features.ShoppingCarts.Services;
@@ -246,7 +246,6 @@ public class OrderService(
                     TotalProductDiscount = cart.TotalProductDiscount,
                     TotalCartDiscount = cart.TotalCartDiscount,
                     TotalPayable = cart.TotalPayable,
-                    AppliedCartPromotionId = cart.AppliedCartPromotion?.Id,
                 };
 
                 order.OrderItems = [.. cart.Items.Select(ci => new OrderItem
@@ -383,9 +382,12 @@ public class OrderService(
                                 await inventoryService.ConfirmReservationAsync(item.ProductId, order.Id);
                             }
 
-                            await promotionService.RecordAppliedCartPromotionUsageAsync(
-                                order.AppliedCartPromotionId,
-                                order.UserId);
+                            var couponCode = await db.ShoppingCarts
+                                .Where(c => c.UserId == order.UserId)
+                                .Select(c => c.CouponCode)
+                                .FirstOrDefaultAsync();
+
+                            await promotionService.RecordPromotionUsageByCouponAsync(couponCode, order.UserId);
 
                             await cartService.ClearCartAsync(order.UserId);
 

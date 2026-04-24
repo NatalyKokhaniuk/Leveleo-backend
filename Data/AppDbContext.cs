@@ -400,12 +400,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         builder.Entity<Order>()
             .HasIndex(o => o.UserId);
 
-        builder.Entity<Order>()
-            .HasOne<Promotion>()
-            .WithMany()
-            .HasForeignKey(o => o.AppliedCartPromotionId)
-            .OnDelete(DeleteBehavior.SetNull);
-
         builder.Entity<OrderItem>()
             .HasOne(oi => oi.Order)
             .WithMany(o => o.OrderItems)

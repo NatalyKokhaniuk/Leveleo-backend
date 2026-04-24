@@ -2,7 +2,6 @@
 using LeveLEO.Features.Payments.Models;
 using LeveLEO.Features.Shipping.Models;
 using LeveLEO.Models;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LeveLEO.Features.Orders.Models;
 
@@ -23,9 +22,6 @@ public class Order : ITimestamped
     public decimal TotalCartDiscount { get; set; } = 0.00m;
 
     public decimal TotalPayable { get; set; }
-
-    /// <summary>Застосована акція рівня кошика на момент оформлення (для нарахування використань купона після оплати).</summary>
-    public Guid? AppliedCartPromotionId { get; set; }
 
     public Guid? DeliveryId { get; set; }
     public Delivery? Delivery { get; set; }

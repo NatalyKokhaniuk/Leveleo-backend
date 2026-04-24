@@ -37,8 +37,11 @@ public interface IPromotionService
     string? couponCode = null,
     string? userId = null);
 
-    /// <summary>Після успішної оплати: збільшити UsedCount акції та/або UsageCount персонального призначення.</summary>
-    Task RecordAppliedCartPromotionUsageAsync(Guid? appliedCartPromotionId, string userId);
+    /// <summary>
+    /// Після успішної оплати: збільшити UsedCount для купонної акції за кодом купона
+    /// та/або UsageCount персонального призначення.
+    /// </summary>
+    Task RecordPromotionUsageByCouponAsync(string? couponCode, string userId);
 
     //===== TRANSLATIONS =====
     Task<PromotionTranslationDto> AddTranslationAsync(Guid promotionId, PromotionTranslationDto dto);
