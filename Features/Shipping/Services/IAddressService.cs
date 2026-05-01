@@ -19,5 +19,5 @@ public interface IAddressService
     // Встановити адресу за замовчуванням (опційно)
     Task<AddressResponseDto> SetDefaultAddressAsync(string userId, Guid addressId);
 
-    AddressResponseDto MapToDto(Address address);
+    AddressResponseDto MapToDto(Address address, bool isDefault = false);
 }

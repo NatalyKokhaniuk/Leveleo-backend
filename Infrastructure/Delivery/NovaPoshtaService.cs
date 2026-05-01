@@ -1,5 +1,6 @@
 ﻿using LeveLEO.Infrastructure.Delivery.DTO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace LeveLEO.Infrastructure.Delivery;
@@ -13,6 +14,13 @@ public class NovaPoshtaService(
             ?? throw new InvalidOperationException("NovaPoshta API key not configured");
 
     private const string ApiUrl = "https://api.novaposhta.ua/v2.0/json/";
+
+    /// <summary>NP очікує PascalCase ключі (CityName, CityRef…) у корені запиту; camelCase давав порожні data при success:true.</summary>
+    private static readonly JsonSerializerOptions NovaPoshtaOutboundJson = new()
+    {
+        PropertyNamingPolicy = null,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     private const int SettlementsPageSize = 150;
     private const int WarehouseFetchLimit = 500;
@@ -278,21 +286,41 @@ public class NovaPoshtaService(
 
     #region Helper Methods
 
+    private static JsonObject BuildRequestEnvelope(NovaPoshtaRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request.MethodProperties);
+
+        var methodPropsNode = JsonSerializer.SerializeToNode(
+            request.MethodProperties,
+            request.MethodProperties.GetType(),
+            NovaPoshtaOutboundJson) ?? throw new InvalidOperationException("Failed to serialize MethodProperties.");
+
+        return new JsonObject
+        {
+            ["ApiKey"] = request.ApiKey,
+            ["ModelName"] = request.ModelName,
+            ["CalledMethod"] = request.CalledMethod,
+            ["MethodProperties"] = methodPropsNode
+        };
+    }
+
     private async Task<T> SendRequestAsync<T>(NovaPoshtaRequest request)
     {
         try
         {
-            var response = await httpClient.PostAsJsonAsync(ApiUrl, request, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+            using var payload = new StringContent(
+                BuildRequestEnvelope(request).ToJsonString(NovaPoshtaOutboundJson),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var response = await httpClient.PostAsync(ApiUrl, payload);
 
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<T>(new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = null
             });
 
             return result ?? throw new InvalidOperationException("Empty response from Nova Poshta API");

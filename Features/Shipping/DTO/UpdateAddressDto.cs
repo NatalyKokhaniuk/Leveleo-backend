@@ -15,6 +15,10 @@ public class UpdateAddressDto
     public Optional<string?> CityRef { get; set; }
     public Optional<string?> CityName { get; set; }
     public Optional<string?> WarehouseRef { get; set; }
+    public Optional<string?> WarehouseNumber { get; set; }
+    public Optional<string?> WarehouseDescription { get; set; }
+    public Optional<string?> PostomatRef { get; set; }
+    public Optional<string?> PostomatDescription { get; set; }
 
     public Optional<string?> StreetRef { get; set; }
     public Optional<string?> Street { get; set; }

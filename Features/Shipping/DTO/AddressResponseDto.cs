@@ -13,6 +13,15 @@ public class AddressResponseDto
 
     public DeliveryType DeliveryType { get; set; }
 
+    /// <summary>Обрана за замовчуванням («улюблена») адреса).</summary>
+    public bool IsDefault { get; set; }
+
+    public string? CityRef { get; set; }
+
+    public string? WarehouseRef { get; set; }
+
+    public string? PostomatRef { get; set; }
+
     // Форматована адреса для відображення користувачу
     public string FormattedAddress { get; set; } = null!;
 

@@ -69,13 +69,14 @@ public class ShoppingCartService(
 
         await db.SaveChangesAsync();
 
-        var itemDtos = await Task.WhenAll(cart.Items
-            .OrderBy(i => i.CreatedAt)
-            .Select(item =>
-            {
-                var available = availByProduct.GetValueOrDefault(item.ProductId, 0);
-                return MapToDtoAsync(item, available);
-            }));
+        // Послідовно: один scoped DbContext (EF не підтримує паралельні запити на одному екземплярі).
+        var itemDtos = new List<ShoppingCartItemDto>();
+        foreach (var item in cart.Items.OrderBy(i => i.CreatedAt))
+        {
+            var available = availByProduct.GetValueOrDefault(item.ProductId, 0);
+            itemDtos.Add(await MapToDtoAsync(item, available));
+        }
+
         var promoResult = await promotion.ApplyCartPromotionAsync(itemDtos, cart.CouponCode, userId);
 
         return new ShoppingCartDto

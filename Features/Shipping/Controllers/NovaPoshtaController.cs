@@ -1,3 +1,4 @@
+using LeveLEO.Features.Shipping.DTO;
 using LeveLEO.Infrastructure.Delivery;
 using LeveLEO.Infrastructure.Delivery.DTO;
 using Microsoft.AspNetCore.Authorization;
@@ -10,19 +11,47 @@ namespace LeveLEO.Features.Shipping.Controllers;
 [Authorize]
 public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : ControllerBase
 {
+    private static CityAutocompleteResponseDto MapCity(CityDto c) => new()
+    {
+        SettlementRef = c.Ref,
+        Present = c.Present,
+        MainDescription = c.MainDescription,
+        DisplayLabel = string.IsNullOrWhiteSpace(c.Present) ? c.MainDescription : c.Present,
+        Area = c.Area,
+        Region = c.Region,
+        SettlementTypeCode = c.SettlementTypeCode,
+        WarehouseCountHint = string.IsNullOrEmpty(c.Warehouse) ? "1" : c.Warehouse
+    };
+
+    private static WarehouseAutocompleteResponseDto MapWarehouse(WarehouseDto w) => new()
+    {
+        WarehouseRef = w.Ref,
+        Description = w.Description,
+        Number = w.Number,
+        CityRef = w.CityRef,
+        CityDescription = w.CityDescription,
+        SettlementRef = w.SettlementRef,
+        SettlementDescription = w.SettlementDescription,
+        ShortAddress = w.ShortAddress,
+        TypeOfWarehouseRef = w.TypeOfWarehouseRef,
+        TypeOfWarehouse = w.TypeOfWarehouse,
+        Latitude = w.Latitude,
+        Longitude = w.Longitude
+    };
+
     /// <summary>Онлайн-пошук населених пунктів (searchSettlements) — зручно для автокомпліту.</summary>
     [HttpGet("cities/search")]
-    public async Task<ActionResult<List<CityDto>>> SearchCities(
+    public async Task<ActionResult<List<CityAutocompleteResponseDto>>> SearchCities(
         [FromQuery] string query,
         [FromQuery] int limit = 20)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Ok(new List<CityDto>());
+            return Ok(new List<CityAutocompleteResponseDto>());
         }
 
         var cities = await novaPoshtaService.SearchCitiesAsync(query.Trim(), limit > 0 ? limit : 20);
-        return Ok(cities);
+        return Ok(cities.ConvertAll(MapCity));
     }
 
     /// <summary>Сторінка довідника населених пунктів НП (getSettlements). Перебирайте page, доки hasMore == true.</summary>
@@ -37,7 +66,7 @@ public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : Contro
 
     /// <summary>Усі поштомати для обраного населеного пункту (Ref з search або довідника).</summary>
     [HttpGet("settlements/{settlementRef}/postomats")]
-    public async Task<ActionResult<List<WarehouseDto>>> GetPostomats(string settlementRef)
+    public async Task<ActionResult<List<WarehouseAutocompleteResponseDto>>> GetPostomats(string settlementRef)
     {
         if (string.IsNullOrWhiteSpace(settlementRef))
         {
@@ -45,12 +74,12 @@ public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : Contro
         }
 
         var list = await novaPoshtaService.GetPostomatsBySettlementAsync(settlementRef.Trim());
-        return Ok(list);
+        return Ok(list.ConvertAll(MapWarehouse));
     }
 
     /// <summary>Усі відділення (не поштомати) з адресами для населеного пункту.</summary>
     [HttpGet("settlements/{settlementRef}/branches")]
-    public async Task<ActionResult<List<WarehouseDto>>> GetBranches(string settlementRef)
+    public async Task<ActionResult<List<WarehouseAutocompleteResponseDto>>> GetBranches(string settlementRef)
     {
         if (string.IsNullOrWhiteSpace(settlementRef))
         {
@@ -58,6 +87,6 @@ public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : Contro
         }
 
         var list = await novaPoshtaService.GetBranchWarehousesBySettlementAsync(settlementRef.Trim());
-        return Ok(list);
+        return Ok(list.ConvertAll(MapWarehouse));
     }
 }

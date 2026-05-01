@@ -9,7 +9,6 @@ public class AddressService(AppDbContext db) : IAddressService
 {
     public async Task<AddressResponseDto> CreateAddressAsync(string userId, CreateAddressDto dto)
     {
-        // Валідація
         ValidateAddress(dto);
 
         var address = new Address
@@ -23,12 +22,17 @@ public class AddressService(AppDbContext db) : IAddressService
             CityRef = dto.CityRef,
             CityName = dto.CityName,
             WarehouseRef = dto.WarehouseRef,
+            WarehouseNumber = dto.WarehouseNumber,
+            WarehouseDescription = dto.WarehouseDescription,
 
             StreetRef = dto.StreetRef,
             Street = dto.Street,
             House = dto.House,
             Flat = dto.Flat,
             Floor = dto.Floor,
+
+            PostomatRef = dto.PostomatRef ?? dto.WarehouseRef,
+            PostomatDescription = dto.PostomatDescription ?? dto.WarehouseDescription,
 
             AdditionalInfo = dto.AdditionalInfo,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -37,16 +41,23 @@ public class AddressService(AppDbContext db) : IAddressService
 
         db.Addresses.Add(address);
 
+        var ownedCount = await db.UserAddresses.CountAsync(ua => ua.UserId == userId);
+        var makePrimary = dto.SetAsPrimary || ownedCount == 0;
+
+        if (makePrimary)
+            await ClearAllPrimaryAddressesAsync(userId);
+
         var userAddress = new UserAddress
         {
             UserId = userId,
-            AddressId = address.Id
+            AddressId = address.Id,
+            IsDefault = makePrimary
         };
 
         db.UserAddresses.Add(userAddress);
         await db.SaveChangesAsync();
 
-        return MapToDto(address);
+        return MapToDto(address, userAddress.IsDefault);
     }
 
     public async Task<AddressResponseDto> UpdateAddressAsync(string userId, Guid addressId, UpdateAddressDto dto)
@@ -100,6 +111,18 @@ public class AddressService(AppDbContext db) : IAddressService
         if (dto.WarehouseRef.HasValue)
             address.WarehouseRef = dto.WarehouseRef.Value;
 
+        if (dto.WarehouseNumber.HasValue)
+            address.WarehouseNumber = dto.WarehouseNumber.Value;
+
+        if (dto.WarehouseDescription.HasValue)
+            address.WarehouseDescription = dto.WarehouseDescription.Value;
+
+        if (dto.PostomatRef.HasValue)
+            address.PostomatRef = dto.PostomatRef.Value;
+
+        if (dto.PostomatDescription.HasValue)
+            address.PostomatDescription = dto.PostomatDescription.Value;
+
         if (dto.StreetRef.HasValue)
             address.StreetRef = dto.StreetRef.Value;
 
@@ -121,7 +144,7 @@ public class AddressService(AppDbContext db) : IAddressService
         address.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync();
 
-        return MapToDto(address);
+        return MapToDto(address, userAddress.IsDefault);
     }
 
     public async Task DeleteAddressAsync(string userId, Guid addressId)
@@ -135,15 +158,19 @@ public class AddressService(AppDbContext db) : IAddressService
                 404
             );
 
+        var wasDefault = userAddress.IsDefault;
+        var uid = userId;
+
         db.UserAddresses.Remove(userAddress);
 
         var usedInOrders = await db.Orders.AnyAsync(o => o.AddressId == addressId);
         if (!usedInOrders)
-        {
             db.Addresses.Remove(userAddress.Address);
-        }
 
         await db.SaveChangesAsync();
+
+        if (wasDefault)
+            await PromoteLatestPrimaryAsync(uid);
     }
 
     public async Task<AddressResponseDto> GetAddressByIdAsync(Guid addressId)
@@ -152,19 +179,24 @@ public class AddressService(AppDbContext db) : IAddressService
             .FirstOrDefaultAsync(a => a.Id == addressId)
             ?? throw new ApiException("ADDRESS_NOT_FOUND", "Address not found.", 404);
 
-        return MapToDto(address);
+        var isDefault = await db.UserAddresses
+            .Where(ua => ua.AddressId == addressId)
+            .Select(ua => ua.IsDefault)
+            .FirstOrDefaultAsync();
+
+        return MapToDto(address, isDefault);
     }
 
     public async Task<List<AddressResponseDto>> GetUserAddressesAsync(string userId)
     {
-        var addresses = await db.UserAddresses
+        var rows = await db.UserAddresses
             .Include(ua => ua.Address)
             .Where(ua => ua.UserId == userId)
-            .Select(ua => ua.Address)
-            .OrderByDescending(a => a.CreatedAt)
+            .OrderByDescending(ua => ua.IsDefault)
+            .ThenByDescending(ua => ua.Address.CreatedAt)
             .ToListAsync();
 
-        return [.. addresses.Select(MapToDto)];
+        return [.. rows.Select(ua => MapToDto(ua.Address, ua.IsDefault))];
     }
 
     public async Task<AddressResponseDto> SetDefaultAddressAsync(string userId, Guid addressId)
@@ -174,7 +206,33 @@ public class AddressService(AppDbContext db) : IAddressService
             .FirstOrDefaultAsync(ua => ua.UserId == userId && ua.AddressId == addressId)
             ?? throw new ApiException("ADDRESS_NOT_FOUND", "Address not found.", 404);
 
-        return MapToDto(userAddress.Address);
+        await ClearAllPrimaryAddressesAsync(userId);
+        userAddress.IsDefault = true;
+        await db.SaveChangesAsync();
+
+        return MapToDto(userAddress.Address, true);
+    }
+
+    private async Task ClearAllPrimaryAddressesAsync(string userId) =>
+        await db.UserAddresses
+            .Where(ua => ua.UserId == userId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(ua => ua.IsDefault, false));
+
+    private async Task PromoteLatestPrimaryAsync(string userId)
+    {
+        if (!await db.UserAddresses.AnyAsync(ua => ua.UserId == userId))
+            return;
+
+        await ClearAllPrimaryAddressesAsync(userId);
+
+        var next = await db.UserAddresses
+            .Include(ua => ua.Address)
+            .Where(ua => ua.UserId == userId)
+            .OrderByDescending(ua => ua.Address.CreatedAt)
+            .FirstAsync();
+
+        next.IsDefault = true;
+        await db.SaveChangesAsync();
     }
 
     #region Helpers
@@ -191,13 +249,18 @@ public class AddressService(AppDbContext db) : IAddressService
             throw new ApiException("VALIDATION_ERROR", "PhoneNumber is required.", 400);
 
         if (string.IsNullOrWhiteSpace(dto.CityRef))
-            throw new ApiException("VALIDATION_ERROR", "City is required.", 400);
+            throw new ApiException("VALIDATION_ERROR", "CityRef (settlementRef) is required.", 400);
 
-        // Перевірка в залежності від типу доставки
         if (dto.DeliveryType == DeliveryType.Warehouse)
         {
             if (string.IsNullOrWhiteSpace(dto.WarehouseRef))
-                throw new ApiException("VALIDATION_ERROR", "Warehouse is required for warehouse delivery.", 400);
+                throw new ApiException("VALIDATION_ERROR", "WarehouseRef is required for warehouse delivery.", 400);
+        }
+        else if (dto.DeliveryType == DeliveryType.Postomat)
+        {
+            if (string.IsNullOrWhiteSpace(dto.PostomatRef) &&
+                string.IsNullOrWhiteSpace(dto.WarehouseRef))
+                throw new ApiException("VALIDATION_ERROR", "Postomat requires warehouseRef or postomatRef (NP settlement point ref).", 400);
         }
         else if (dto.DeliveryType == DeliveryType.Doors)
         {
@@ -206,19 +269,19 @@ public class AddressService(AppDbContext db) : IAddressService
         }
     }
 
-    public AddressResponseDto MapToDto(Address address)
+    public AddressResponseDto MapToDto(Address address, bool isDefault = false)
     {
         var formattedAddress = address.DeliveryType switch
         {
             DeliveryType.Warehouse =>
-                $"{address.CityName}, {address.WarehouseDescription ?? $"Відділення №{address.WarehouseNumber}"}",
+                $"{address.CityName}, {address.WarehouseDescription ?? $"Відділення №{address.WarehouseNumber ?? "?"}"}",
 
             DeliveryType.Doors =>
                 $"{address.CityName}, {address.Street} {address.House}" +
                 (string.IsNullOrWhiteSpace(address.Flat) ? "" : $", кв. {address.Flat}"),
 
             DeliveryType.Postomat =>
-                $"{address.CityName}, {address.PostomatDescription}",
+                $"{address.CityName}, {address.PostomatDescription ?? address.WarehouseDescription ?? "Поштомат"}",
 
             _ => address.CityName ?? ""
         };
@@ -231,6 +294,10 @@ public class AddressService(AppDbContext db) : IAddressService
             MiddleName = address.MiddleName,
             PhoneNumber = address.PhoneNumber,
             DeliveryType = address.DeliveryType,
+            IsDefault = isDefault,
+            CityRef = address.CityRef,
+            WarehouseRef = address.WarehouseRef,
+            PostomatRef = address.PostomatRef,
             FormattedAddress = formattedAddress,
             CityName = address.CityName,
             WarehouseDescription = address.WarehouseDescription,

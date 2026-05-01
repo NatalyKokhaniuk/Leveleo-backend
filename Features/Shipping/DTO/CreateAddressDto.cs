@@ -17,6 +17,16 @@ public class CreateAddressDto
 
     public string? CityName { get; set; }
     public string? WarehouseRef { get; set; }
+    public string? WarehouseNumber { get; set; }
+    public string? WarehouseDescription { get; set; }
+
+    /// <summary>Відділення / поштомат НП для типу Postomat.</summary>
+    public string? PostomatRef { get; set; }
+
+    public string? PostomatDescription { get; set; }
+
+    /// <summary>Якщо true — робить основною серед адрес користувача.</summary>
+    public bool SetAsPrimary { get; set; }
 
     // Для адресної доставки
     public string? StreetRef { get; set; }
