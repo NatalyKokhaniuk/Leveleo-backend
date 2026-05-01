@@ -13,4 +13,7 @@ public class OrderListItemDto : ITimestamped
     public DateTimeOffset UpdatedAt { get; set; }
 
     public string? AddressSummary { get; set; }
+
+    /// <summary>true, якщо серед позицій є товар із IsActive=false (наприклад після DELETE з історією замовлень).</summary>
+    public bool HasArchivedProducts { get; set; }
 }

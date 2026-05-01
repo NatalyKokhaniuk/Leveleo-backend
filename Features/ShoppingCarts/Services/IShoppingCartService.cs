@@ -8,10 +8,10 @@ public interface IShoppingCartService
     /// Отримати повністю перерахований кошик користувача.
     /// НЕ кидає помилок через відсутність товару.
     /// Автоматично:
-    /// - видаляє недоступні товари
-    /// - зменшує кількість до доступної
+    /// - видаляє рядки з товарами, яких більше немає в каталозі
+    /// - залишає товари з нульовим залишком у кошику (не враховуються в сумі та замовленні)
+    /// - зменшує кількість до доступної, якщо залишок > 0 і менший за кількість у кошику
     /// - застосовує найкращі акції
-    /// - повертає список видалених та скоригованих айтемів
     /// </summary>
     Task<ShoppingCartDto> GetCalculatedCartAsync(string userId);
 
@@ -55,4 +55,9 @@ public interface IShoppingCartService
     /// Повертає мінімалістичний результат.
     /// </summary>
     Task<CartClearResultDto> ClearCartAsync(string userId);
+
+    /// <summary>
+    /// Після успішної оплати знімає з кошика лише придбані кількості (недоступні рядки лишаються).
+    /// </summary>
+    Task SubtractPurchasedQuantitiesAsync(string userId, IReadOnlyList<(Guid ProductId, int Quantity)> lines);
 }

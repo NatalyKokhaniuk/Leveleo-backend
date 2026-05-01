@@ -1,6 +1,4 @@
-﻿using LeveLEO.Features.Products.DTO;
-
-namespace LeveLEO.Features.Orders.DTO;
+﻿namespace LeveLEO.Features.Orders.DTO;
 
 public class OrderItemDto
 {
@@ -8,6 +6,8 @@ public class OrderItemDto
     public Guid OrderId { get; set; }
     public Guid ProductId { get; set; }
     public string ProductName { get; set; } = null!;
+    /// <summary>Дані для картки товару, бейджа «архів» і посилання (якщо ще активний).</summary>
+    public OrderLineProductSummaryDto ProductSnapshot { get; set; } = null!;
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal DiscountedUnitPrice { get; set; }

@@ -23,6 +23,9 @@ public interface IPromotionService
 
     Task<List<PromotionResponseDto>> GetAllAsync();
 
+    /// <summary>При видаленні товару: прибрати його ID з умов акцій і за потреби обнулити порожні умови.</summary>
+    Task RemoveProductFromAllPromotionConditionsAsync(Guid productId);
+
     // ===== PRODUCT LEVEL =====
 
     Task<(decimal? discountedPrice, Promotion? promotion)>

@@ -54,12 +54,22 @@ public class UserProductRelationService(AppDbContext db, IProductService product
 
     public async Task<List<ProductResponseDto>> GetFavoritesByUserIdAsync(string userId)
     {
-        var productIds = await _db.UserFavorites
-        .Where(f => f.UserId == userId)
-        .Select(f => f.ProductId)
-        .ToListAsync();
+        await _db.UserFavorites
+            .Where(f => f.UserId == userId && !_db.Products.Any(p => p.Id == f.ProductId))
+            .ExecuteDeleteAsync();
 
-        return await _productService.BuildFullDtosAsync(productIds);
+        var productIds = await _db.UserFavorites
+            .Where(f => f.UserId == userId)
+            .OrderBy(f => f.CreatedAt)
+            .Select(f => f.ProductId)
+            .ToListAsync();
+
+        if (productIds.Count == 0)
+            return [];
+
+        var dtos = await _productService.BuildFullDtosAsync(productIds);
+        var byId = dtos.ToDictionary(d => d.Id);
+        return [.. productIds.Where(byId.ContainsKey).Select(id => byId[id])];
     }
 
     #endregion Favorites
@@ -107,12 +117,22 @@ public class UserProductRelationService(AppDbContext db, IProductService product
 
     public async Task<List<ProductResponseDto>> GetComparisonByUserIdAsync(string userId)
     {
-        var productIds = await _db.UserComparisons
-        .Where(f => f.UserId == userId)
-        .Select(f => f.ProductId)
-        .ToListAsync();
+        await _db.UserComparisons
+            .Where(c => c.UserId == userId && !_db.Products.Any(p => p.Id == c.ProductId))
+            .ExecuteDeleteAsync();
 
-        return await _productService.BuildFullDtosAsync(productIds);
+        var productIds = await _db.UserComparisons
+            .Where(c => c.UserId == userId)
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => c.ProductId)
+            .ToListAsync();
+
+        if (productIds.Count == 0)
+            return [];
+
+        var dtos = await _productService.BuildFullDtosAsync(productIds);
+        var byId = dtos.ToDictionary(d => d.Id);
+        return [.. productIds.Where(byId.ContainsKey).Select(id => byId[id])];
     }
 
     #endregion Comparison

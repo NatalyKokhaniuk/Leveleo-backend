@@ -128,6 +128,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
 
         List<string> imageKeys = [];
         List<string> videoKeys = [];
+        var hardDelete = false;
 
         await strategy.ExecuteAsync(async () =>
         {
@@ -139,14 +140,40 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 .FirstOrDefaultAsync(p => p.Id == productId)
                 ?? throw new ApiException("PRODUCT_NOT_FOUND", $"Product with Id '{productId}' not found.", 404);
 
-            imageKeys = product.Images.Select(i => i.ImageKey).ToList();
-            videoKeys = product.Videos.Select(v => v.VideoKey).ToList();
+            var inOrders = await _db.OrderItems.AnyAsync(oi => oi.ProductId == productId);
 
-            _db.Products.Remove(product);
+            await _db.ShoppingCartItems
+                .Where(i => i.ProductId == productId)
+                .ExecuteDeleteAsync();
+            await _db.UserFavorites
+                .Where(f => f.ProductId == productId)
+                .ExecuteDeleteAsync();
+            await _db.UserComparisons
+                .Where(c => c.ProductId == productId)
+                .ExecuteDeleteAsync();
+
+            await _promotionService.RemoveProductFromAllPromotionConditionsAsync(productId);
+
+            if (inOrders)
+            {
+                product.IsActive = false;
+                product.StockQuantity = 0;
+                product.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                hardDelete = true;
+                imageKeys = [.. product.Images.Select(i => i.ImageKey)];
+                videoKeys = [.. product.Videos.Select(v => v.VideoKey)];
+                _db.Products.Remove(product);
+            }
+
             await _db.SaveChangesAsync();
-
             await transaction.CommitAsync();
         });
+
+        if (!hardDelete)
+            return;
 
         foreach (var key in imageKeys)
             await _mediaService.DeleteFileAsync(key);
@@ -440,6 +467,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
             StockQuantity = product.StockQuantity,
             AvailableQuantity = availableQuantity,
             IsActive = product.IsActive,
+            CatalogDisplayState = ProductCatalogDisplayStateHelper.Resolve(true, product.IsActive),
             CategoryId = product.CategoryId,
             BrandId = product.BrandId,
             AverageRating = averageRating,
@@ -534,6 +562,7 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
                 StockQuantity = product.StockQuantity,
                 AvailableQuantity = availableQuantity,
                 IsActive = product.IsActive,
+                CatalogDisplayState = ProductCatalogDisplayStateHelper.Resolve(true, product.IsActive),
                 CategoryId = product.CategoryId,
                 BrandId = product.BrandId,
                 AverageRating = agg?.AverageRating ?? 0m,

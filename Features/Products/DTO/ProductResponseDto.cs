@@ -13,6 +13,9 @@ public class ProductResponseDto
     public int StockQuantity { get; set; }
     public int AvailableQuantity { get; set; }
     public bool IsActive { get; set; }
+
+    /// <summary>Стан для UI (активний / архів / відсутній у БД — останнє лише якщо додаєте зріщені відповіді з посиланнями без рядка Product).</summary>
+    public ProductCatalogDisplayState CatalogDisplayState { get; set; }
     public Guid CategoryId { get; set; }
     public Guid BrandId { get; set; }
 

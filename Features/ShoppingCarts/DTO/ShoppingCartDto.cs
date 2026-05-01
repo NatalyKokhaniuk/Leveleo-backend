@@ -18,6 +18,8 @@ public class ShoppingCartDto
 
     public List<ShoppingCartItemDto> Items { get; set; } = [];
     public List<ShoppingCartItemDto> RemovedItems { get; set; } = [];
+    /// <summary>Товари, яких більше немає в каталозі — рядки кошика видалено.</summary>
+    public List<Guid> RemovedMissingProductIds { get; set; } = [];
     public bool CartAdjusted { get; set; }
 
     // Суми

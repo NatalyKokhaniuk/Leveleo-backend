@@ -128,14 +128,18 @@ public class OrderService(
             }
         }
 
+        var archivedOrderIds = await GetOrderIdsWithArchivedProductsAsync([.. orders.Select(o => o.Id)]);
+
         return [.. orders.Select(o => new OrderListItemDto
         {
             Id = o.Id,
             Number = o.Number,
             CreatedAt = o.CreatedAt,
+            UpdatedAt = o.UpdatedAt,
             Status = o.Status,
             TotalPayable = o.TotalPayable,
-            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}"
+            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}",
+            HasArchivedProducts = archivedOrderIds.Contains(o.Id)
         })];
     }
 
@@ -207,7 +211,25 @@ public class OrderService(
 
         var cart = await cartService.GetCalculatedCartAsync(userId);
 
-        if (cart.CartAdjusted || (cart.RemovedItems != null && cart.RemovedItems.Count > 0))
+        if (cart.Items == null || cart.Items.Count == 0)
+        {
+            throw new ApiException(
+                "CART_IS_EMPTY",
+                "Cannot create order from empty cart.",
+                400
+            );
+        }
+
+        var purchases = cart.Items
+            .Where(i => i.QuantityApplyingToTotals > 0)
+            .ToList();
+
+        var catalogChanged =
+            cart.CartAdjusted
+            || (cart.RemovedItems?.Count ?? 0) > 0
+            || (cart.RemovedMissingProductIds?.Count ?? 0) > 0;
+
+        if (catalogChanged)
         {
             return new CreateOrderResultDto
             {
@@ -215,12 +237,13 @@ public class OrderService(
                 Message = "Cart has changed. Please review your items."
             };
         }
-        if (cart.Items == null || cart.Items.Count == 0)
+
+        if (purchases.Count == 0)
         {
             throw new ApiException(
-                "CART_IS_EMPTY",
-                "Cannot create order from empty cart.",
-                400
+                "NO_PURCHASABLE_ITEMS",
+                "No items in your cart can be purchased right now (out of stock).",
+                409
             );
         }
 
@@ -248,12 +271,12 @@ public class OrderService(
                     TotalPayable = cart.TotalPayable,
                 };
 
-                order.OrderItems = [.. cart.Items.Select(ci => new OrderItem
+                order.OrderItems = [.. purchases.Select(ci => new OrderItem
                 {
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
                     ProductId = ci.Product.Id,
-                    Quantity = ci.Quantity,
+                    Quantity = ci.QuantityApplyingToTotals,
                     UnitPrice = ci.Price,
                     DiscountedUnitPrice = ci.PriceAfterCartPromotion,
                 })];
@@ -310,10 +333,10 @@ public class OrderService(
                 TotalProductDiscount = order.TotalProductDiscount,
                 TotalCartDiscount = order.TotalCartDiscount,
                 DeliveryAddress = deliveryAddress,
-                Items = [.. cart.Items.Select(ci => new OrderCreatedItemSnapshot
+                Items = [.. purchases.Select(ci => new OrderCreatedItemSnapshot
                 {
                     ProductName = ci.Product.Name,
-                    Quantity = ci.Quantity,
+                    Quantity = ci.QuantityApplyingToTotals,
                     UnitPrice = ci.Price,
                     DiscountedUnitPrice = ci.PriceAfterCartPromotion,
                     LineTotal = ci.TotalPrice
@@ -389,7 +412,8 @@ public class OrderService(
 
                             await promotionService.RecordPromotionUsageByCouponAsync(couponCode, order.UserId);
 
-                            await cartService.ClearCartAsync(order.UserId);
+                            await cartService.SubtractPurchasedQuantitiesAsync(order.UserId, [..
+                                order.OrderItems.Select(oi => (oi.ProductId, oi.Quantity))]);
 
                             await db.SaveChangesAsync();
                             await tx.CommitAsync();
@@ -481,6 +505,44 @@ public class OrderService(
         }
     }
 
+    private async Task<HashSet<Guid>> GetOrderIdsWithArchivedProductsAsync(IReadOnlyCollection<Guid> orderIds)
+    {
+        if (orderIds.Count == 0)
+            return [];
+
+        var list = await db.OrderItems
+            .AsNoTracking()
+            .Where(oi => orderIds.Contains(oi.OrderId))
+            .Where(oi => db.Products.Any(p => p.Id == oi.ProductId && !p.IsActive))
+            .Select(oi => oi.OrderId)
+            .Distinct()
+            .ToListAsync();
+
+        return [.. list];
+    }
+
+    private static OrderLineProductSummaryDto MapOrderLineSummary(ProductResponseDto dto) => new()
+    {
+        Id = dto.Id,
+        Slug = dto.Slug,
+        Name = dto.Name,
+        MainImageKey = dto.MainImageKey,
+        ExistsInCatalog = true,
+        IsActive = dto.IsActive,
+        CatalogDisplayState = dto.CatalogDisplayState
+    };
+
+    private static OrderLineProductSummaryDto OrderLineSummaryForMissingProduct(Guid productId) => new()
+    {
+        Id = productId,
+        Slug = "",
+        Name = "Товар недоступний у каталозі",
+        MainImageKey = null,
+        ExistsInCatalog = false,
+        IsActive = false,
+        CatalogDisplayState = ProductCatalogDisplayState.MissingFromDatabase
+    };
+
     private async Task<OrderDetailDto> MapToDetailDtoAsync(Order order)
     {
         var productIds = order.OrderItems?.Select(oi => oi.ProductId).Distinct().ToList() ?? [];
@@ -488,7 +550,7 @@ public class OrderService(
             ? await productService.BuildFullDtosAsync(productIds)
             : [];
         var productDict = products.ToDictionary(p => p.Id);
-        
+
         return new OrderDetailDto
         {
             Id = order.Id,
@@ -525,13 +587,29 @@ public class OrderService(
             },
             OrderItems = order.OrderItems?.Select(oi =>
             {
-                var prodDto = productDict[oi.ProductId];
+                if (!productDict.TryGetValue(oi.ProductId, out var prodDto))
+                {
+                    var missing = OrderLineSummaryForMissingProduct(oi.ProductId);
+                    return new OrderItemDto
+                    {
+                        Id = oi.Id,
+                        ProductId = oi.ProductId,
+                        OrderId = oi.OrderId,
+                        ProductName = missing.Name,
+                        ProductSnapshot = missing,
+                        Quantity = oi.Quantity,
+                        UnitPrice = oi.UnitPrice,
+                        DiscountedUnitPrice = oi.DiscountedUnitPrice,
+                    };
+                }
+
                 return new OrderItemDto
                 {
                     Id = oi.Id,
                     ProductId = oi.ProductId,
                     OrderId = oi.OrderId,
                     ProductName = prodDto.Name,
+                    ProductSnapshot = MapOrderLineSummary(prodDto),
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
                     DiscountedUnitPrice = oi.DiscountedUnitPrice,
@@ -643,6 +721,8 @@ public class OrderService(
             .Take(filter.PageSize)
             .ToListAsync();
 
+        var archivedOrderIds = await GetOrderIdsWithArchivedProductsAsync([.. orders.Select(o => o.Id)]);
+
         var items = orders.Select(o => new OrderListItemDto
         {
             Id = o.Id,
@@ -650,7 +730,9 @@ public class OrderService(
             CreatedAt = o.CreatedAt,
             Status = o.Status,
             TotalPayable = o.TotalPayable,
-            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}"
+            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}",
+            HasArchivedProducts = archivedOrderIds.Contains(o.Id),
+            UpdatedAt = o.UpdatedAt
         }).ToList();
 
         return new PagedResultDto<OrderListItemDto>

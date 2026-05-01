@@ -7,7 +7,6 @@ using LeveLEO.Features.Promotions.Services;
 using LeveLEO.Features.ShoppingCarts.DTO;
 using LeveLEO.Features.ShoppingCarts.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Text.RegularExpressions;
 
 namespace LeveLEO.Features.ShoppingCarts.Services;
 
@@ -31,28 +30,52 @@ public class ShoppingCartService(
             return new ShoppingCartDto { UserId = userId };
         }
 
-        var removedItems = new List<ShoppingCartItemDto>();
-        var CartAdjusted = false;
+        var removedMissingProductIds = new List<Guid>();
+        var cartAdjusted = false;
+
+        var cartProductIds = cart.Items.Select(i => i.ProductId).Distinct().ToList();
+        var existingProductIds = await db.Products
+            .AsNoTracking()
+            .Where(p => cartProductIds.Contains(p.Id))
+            .Select(p => p.Id)
+            .ToListAsync();
+        var existingSet = existingProductIds.ToHashSet();
+
         foreach (var item in cart.Items.ToList())
         {
-            var available = await inventory.GetAvailableQuantityAsync(item.ProductId);
-
-            if (available == 0)
+            if (!existingSet.Contains(item.ProductId))
             {
-                cart.Items.Remove(item);
-                removedItems.Add(await MapToDtoAsync(item));
+                removedMissingProductIds.Add(item.ProductId);
                 db.ShoppingCartItems.Remove(item);
-            }
-            else if (item.Quantity > available)
-            {
-                item.Quantity = available;
-                CartAdjusted = true;
+                cart.Items.Remove(item);
             }
         }
 
         await db.SaveChangesAsync();
 
-        var itemDtos = await Task.WhenAll(cart.Items.Select(MapToDtoAsync));
+        var availByProduct = cart.Items.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await inventory.GetAvailableQuantitiesAsync(cart.Items.Select(i => i.ProductId).Distinct());
+
+        foreach (var item in cart.Items.ToList())
+        {
+            var available = availByProduct.GetValueOrDefault(item.ProductId, 0);
+            if (available > 0 && item.Quantity > available)
+            {
+                item.Quantity = available;
+                cartAdjusted = true;
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        var itemDtos = await Task.WhenAll(cart.Items
+            .OrderBy(i => i.CreatedAt)
+            .Select(item =>
+            {
+                var available = availByProduct.GetValueOrDefault(item.ProductId, 0);
+                return MapToDtoAsync(item, available);
+            }));
         var promoResult = await promotion.ApplyCartPromotionAsync(itemDtos, cart.CouponCode, userId);
 
         return new ShoppingCartDto
@@ -68,8 +91,9 @@ public class ShoppingCartService(
             AppliedCartPromotion = promoResult.AppliedCartPromotion,
             CouponApplyResult = promoResult.CouponResult,
             CouponApplyMessage = promoResult.Message,
-            RemovedItems = removedItems,
-            CartAdjusted = CartAdjusted
+            RemovedItems = [],
+            RemovedMissingProductIds = removedMissingProductIds,
+            CartAdjusted = cartAdjusted
         };
     }
 
@@ -111,7 +135,9 @@ public class ShoppingCartService(
 
         await db.SaveChangesAsync();
 
-        return await MapToDtoAsync(cart.Items.First(i => i.ProductId == productId));
+        var line = cart.Items.First(i => i.ProductId == productId);
+        var avAfter = await inventory.GetAvailableQuantityAsync(productId);
+        return await MapToDtoAsync(line, avAfter);
     }
 
     public async Task<ShoppingCartItemDto> IncreaseQuantityAsync(string userId, Guid productId, int amount = 1)
@@ -127,7 +153,8 @@ public class ShoppingCartService(
         item.Quantity += amount;
         await db.SaveChangesAsync();
 
-        return await MapToDtoAsync(item);
+        var avAfter = await inventory.GetAvailableQuantityAsync(productId);
+        return await MapToDtoAsync(item, avAfter);
     }
 
     public async Task<ShoppingCartItemDto?> DecreaseQuantityAsync(string userId, Guid productId, int amount = 1)
@@ -146,7 +173,11 @@ public class ShoppingCartService(
         }
 
         await db.SaveChangesAsync();
-        return item.Quantity > 0 ? await MapToDtoAsync(item) : null;
+        if (item.Quantity <= 0)
+            return null;
+
+        var avAfter = await inventory.GetAvailableQuantityAsync(productId);
+        return await MapToDtoAsync(item, avAfter);
     }
 
     public async Task RemoveItemAsync(string userId, Guid productId)
@@ -210,6 +241,38 @@ public class ShoppingCartService(
         };
     }
 
+    public async Task SubtractPurchasedQuantitiesAsync(string userId, IReadOnlyList<(Guid ProductId, int Quantity)> lines)
+    {
+        if (lines.Count == 0)
+            return;
+
+        var cart = await db.ShoppingCarts
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null)
+            return;
+
+        foreach (var (productId, qty) in lines)
+        {
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item == null)
+                continue;
+
+            item.Quantity -= qty;
+            if (item.Quantity <= 0)
+            {
+                db.ShoppingCartItems.Remove(item);
+                cart.Items.Remove(item);
+            }
+        }
+
+        if (cart.Items.Count == 0)
+            cart.CouponCode = null;
+
+        await db.SaveChangesAsync();
+    }
+
     #endregion ApplyCoupon / RemoveCoupon / ClearCart
 
     #region Helpers
@@ -235,14 +298,17 @@ public class ShoppingCartService(
         return cart;
     }
 
-    private async Task<ShoppingCartItemDto> MapToDtoAsync(ShoppingCartItem item)
+    private async Task<ShoppingCartItemDto> MapToDtoAsync(ShoppingCartItem item, int availableQuantity)
     {
         var productDto = await productService.BuildFullDtoAsync(item.ProductId);
+        var qtyApplying = availableQuantity > 0 ? Math.Min(item.Quantity, availableQuantity) : 0;
 
         return new ShoppingCartItemDto
         {
             Product = productDto,
             Quantity = item.Quantity,
+            AvailableQuantity = availableQuantity,
+            QuantityApplyingToTotals = qtyApplying,
             Price = item.PriceAfterProductPromotion,
             PriceAfterProductPromotion = item.PriceAfterProductPromotion,
             PriceAfterCartPromotion = item.PriceAfterCartPromotion

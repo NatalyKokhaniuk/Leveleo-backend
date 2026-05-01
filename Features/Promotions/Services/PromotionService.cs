@@ -1,7 +1,9 @@
 ﻿using LeveLEO.Data;
+using LeveLEO.Features.Products.DTO;
 using LeveLEO.Features.Products.Models;
 using LeveLEO.Features.Promotions.DTO;
 using LeveLEO.Features.Promotions.Models;
+using LeveLEO.Features.Promotions.Models.LevelConditions;
 using LeveLEO.Features.ShoppingCarts.DTO;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
@@ -51,6 +53,11 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             }).ToList() ?? []
         };
 
+        await PromotionConditionProductRefs.EnsureReferencedProductsExistAsync(
+            _db,
+            promotion.ProductConditions,
+            promotion.CartConditions);
+
         _db.Promotions.Add(promotion);
         await _db.SaveChangesAsync();
         await _eventBus.PublishAsync(new PromotionCreatedEvent
@@ -65,7 +72,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             EndDate = promotion.EndDate,
             CouponCode = promotion.CouponCode
         });
-        return MapToDto(promotion, includeSensitiveCouponFields: true);
+        return await MapSinglePromotionToDtoAsync(promotion, includeSensitiveCouponFields: true);
     }
 
     public async Task<PromotionResponseDto> GetBySlugAsync(string slug, bool includeSensitiveCouponFields = false)
@@ -76,7 +83,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             ?? throw new ApiException("PROMOTION_NOT_FOUND",
                 $"Promotion with slug '{slug}' not found.", 404);
 
-        return MapToDto(promotion, includeSensitiveCouponFields);
+        return await MapSinglePromotionToDtoAsync(promotion, includeSensitiveCouponFields);
     }
 
     public async Task<PromotionResponseDto> UpdateAsync(Guid id, UpdatePromotionDto dto)
@@ -131,12 +138,62 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         if (dto.MaxUsages.HasValue)
             promotion.MaxUsages = dto.MaxUsages.Value;
 
+        await PromotionConditionProductRefs.EnsureReferencedProductsExistAsync(
+            _db,
+            promotion.ProductConditions,
+            promotion.CartConditions);
+
         await _db.SaveChangesAsync();
 
-        return MapToDto(promotion, includeSensitiveCouponFields: true);
+        return await MapSinglePromotionToDtoAsync(promotion, includeSensitiveCouponFields: true);
     }
 
-    private static PromotionResponseDto MapToDto(Promotion p, bool includeSensitiveCouponFields)
+    public async Task RemoveProductFromAllPromotionConditionsAsync(Guid productId)
+    {
+        var promotions = await _db.Promotions.ToListAsync();
+        var changed = false;
+        foreach (var p in promotions)
+        {
+            if (PromotionConditionProductRefs.StripProductIdFromPromotion(p, productId))
+                changed = true;
+        }
+
+        if (changed)
+            await _db.SaveChangesAsync();
+    }
+
+    private async Task<List<PromotionResponseDto>> MapPromotionsToDtosAsync(
+        List<Promotion> promotions,
+        bool includeSensitiveCouponFields)
+    {
+        var allIds = new HashSet<Guid>();
+        foreach (var p in promotions)
+        {
+            foreach (var id in CollectReferencedProductIds(p))
+                allIds.Add(id);
+        }
+
+        var lookup = await LoadProductLookupAsync(allIds);
+        var result = new List<PromotionResponseDto>(promotions.Count);
+        foreach (var p in promotions)
+        {
+            var refs = BuildReferencedProducts(p, lookup);
+            result.Add(MapToDtoInternal(p, includeSensitiveCouponFields, refs));
+        }
+
+        return result;
+    }
+
+    private async Task<PromotionResponseDto> MapSinglePromotionToDtoAsync(Promotion p, bool includeSensitiveCouponFields)
+    {
+        var list = await MapPromotionsToDtosAsync([p], includeSensitiveCouponFields);
+        return list[0];
+    }
+
+    private static PromotionResponseDto MapToDtoInternal(
+        Promotion p,
+        bool includeSensitiveCouponFields,
+        IReadOnlyList<PromotionReferencedProductDto> referencedProducts)
     {
         return new PromotionResponseDto
         {
@@ -158,6 +215,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             CouponCode = includeSensitiveCouponFields ? p.CouponCode : null,
             MaxUsages = includeSensitiveCouponFields ? p.MaxUsages : null,
             UsedCount = includeSensitiveCouponFields ? p.UsedCount : 0,
+            ReferencedProducts = [.. referencedProducts],
             Translations = [.. p.Translations.Select(t => new PromotionTranslationDto
             {
                 LanguageCode = t.LanguageCode,
@@ -165,6 +223,64 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 Description = t.Description
             })]
         };
+    }
+
+    private static HashSet<Guid> CollectReferencedProductIds(Promotion p)
+    {
+        var ids = new HashSet<Guid>();
+        foreach (var id in p.ProductConditions?.GetProductIdsOrEmpty() ?? [])
+            ids.Add(id);
+        foreach (var id in p.CartConditions?.GetProductIdsOrEmpty() ?? [])
+            ids.Add(id);
+        return ids;
+    }
+
+    private async Task<Dictionary<Guid, (string Name, string Slug, bool IsActive)>> LoadProductLookupAsync(HashSet<Guid> ids)
+    {
+        if (ids.Count == 0)
+            return new Dictionary<Guid, (string, string, bool)>();
+
+        var rows = await _db.Products
+            .AsNoTracking()
+            .Where(pr => ids.Contains(pr.Id))
+            .Select(pr => new { pr.Id, pr.Name, pr.Slug, pr.IsActive })
+            .ToListAsync();
+
+        return rows.ToDictionary(x => x.Id, x => (x.Name, x.Slug, x.IsActive));
+    }
+
+    private static List<PromotionReferencedProductDto> BuildReferencedProducts(
+        Promotion promotion,
+        IReadOnlyDictionary<Guid, (string Name, string Slug, bool IsActive)> lookup)
+    {
+        var ordered = CollectReferencedProductIds(promotion).OrderBy(id => id).ToList();
+        var list = new List<PromotionReferencedProductDto>(ordered.Count);
+        foreach (var productId in ordered)
+        {
+            if (!lookup.TryGetValue(productId, out var row))
+            {
+                list.Add(new PromotionReferencedProductDto
+                {
+                    ProductId = productId,
+                    ExistsInCatalog = false,
+                    IsActive = false,
+                    CatalogDisplayState = ProductCatalogDisplayState.MissingFromDatabase
+                });
+                continue;
+            }
+
+            list.Add(new PromotionReferencedProductDto
+            {
+                ProductId = productId,
+                Name = row.Name,
+                Slug = row.Slug,
+                ExistsInCatalog = true,
+                IsActive = row.IsActive,
+                CatalogDisplayState = ProductCatalogDisplayStateHelper.Resolve(true, row.IsActive)
+            });
+        }
+
+        return list;
     }
 
     public async Task<PromotionResponseDto> GetByIdAsync(Guid id, bool includeSensitiveCouponFields = false)
@@ -175,7 +291,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 ?? throw new ApiException("PROMOTION_NOT_FOUND",
                     $"Promotion with id '{id}' not found.", 404);
 
-        return MapToDto(promotion, includeSensitiveCouponFields);
+        return await MapSinglePromotionToDtoAsync(promotion, includeSensitiveCouponFields);
     }
 
     public async Task<List<PromotionResponseDto>> GetActiveAsync(bool guestEligibleOnly = false)
@@ -194,7 +310,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             .OrderByDescending(p => p.StartDate)
             .ToListAsync();
 
-        return [.. promotions.Select(p => MapToDto(p, includeSensitiveCouponFields: false))];
+        return await MapPromotionsToDtosAsync(promotions, includeSensitiveCouponFields: false);
     }
 
     public async Task<List<PromotionResponseDto>> GetAllAsync()
@@ -204,7 +320,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
 
-        return [.. promotions.Select(p => MapToDto(p, includeSensitiveCouponFields: true))];
+        return await MapPromotionsToDtosAsync(promotions, includeSensitiveCouponFields: true);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -293,7 +409,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         var result = new ShoppingCartPromotionResultDto
         {
             Items = itemList,
-            TotalProductsPrice = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity)
+            TotalProductsPrice = itemList.Sum(i => i.PriceAfterProductPromotion * i.QuantityApplyingToTotals)
         };
 
         var cartPromotions = await _db.Promotions
@@ -361,8 +477,8 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 if (p == couponPromotion || !p.IsCoupon)
                 {
                     var cond = p.CartConditions; // CartLevelCondition
-                    var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity);
-                    var totalQty = itemList.Sum(i => i.Quantity);
+                    var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.QuantityApplyingToTotals);
+                    var totalQty = itemList.Sum(i => i.QuantityApplyingToTotals);
                     if (cond != null)
                     {
                         if (cond.MinTotalAmount.HasValue && cartTotal < cond.MinTotalAmount.Value)
@@ -379,7 +495,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                                 return true;
                             }
 
-                            if (!itemList.Any(i => productIds.Contains(i.Product.Id)))
+                            if (!itemList.Any(i => i.Quantity > 0 && productIds.Contains(i.Product.Id)))
                                 return false;
                         }
 
@@ -391,7 +507,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                                 return true;
                             }
 
-                            if (!itemList.Any(i => categoryIds.Contains(i.Product.CategoryId)))
+                            if (!itemList.Any(i => i.Quantity > 0 && categoryIds.Contains(i.Product.CategoryId)))
                                 return false;
                         }
                     }
@@ -405,7 +521,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         var bestPromotionResult = eligiblePromotions
             .Select(p =>
             {
-                var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity);
+                var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.QuantityApplyingToTotals);
                 var totalDiscount = p.DiscountType switch
                 {
                     DiscountType.Percentage => cartTotal * (p.DiscountValue!.Value / 100m),
@@ -420,23 +536,23 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         if (bestPromotionResult != null)
         {
             var applied = bestPromotionResult.Promotion;
-            var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity);
+            var cartTotal = itemList.Sum(i => i.PriceAfterProductPromotion * i.QuantityApplyingToTotals);
             decimal totalCartDiscount = bestPromotionResult.DiscountAmount;
 
             foreach (var item in itemList)
             {
-                var itemBase = item.PriceAfterProductPromotion * item.Quantity;
+                var itemBase = item.PriceAfterProductPromotion * item.QuantityApplyingToTotals;
                 item.PriceAfterCartPromotion = item.PriceAfterProductPromotion;
 
-                if (cartTotal > 0)
+                if (cartTotal > 0 && item.QuantityApplyingToTotals > 0)
                 {
                     var proportionalDiscount = totalCartDiscount * (itemBase / cartTotal);
-                    item.PriceAfterCartPromotion -= proportionalDiscount / item.Quantity;
+                    item.PriceAfterCartPromotion -= proportionalDiscount / item.QuantityApplyingToTotals;
                 }
             }
 
             result.TotalCartDiscount = totalCartDiscount;
-            result.FinalPrice = itemList.Sum(i => i.PriceAfterCartPromotion * i.Quantity);
+            result.FinalPrice = itemList.Sum(i => i.PriceAfterCartPromotion * i.QuantityApplyingToTotals);
 
             result.AppliedCartPromotion = new AppliedPromotionDto
             {
@@ -476,7 +592,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         else
         {
             result.TotalCartDiscount = 0m;
-            result.FinalPrice = itemList.Sum(i => i.PriceAfterProductPromotion * i.Quantity);
+            result.FinalPrice = itemList.Sum(i => i.PriceAfterProductPromotion * i.QuantityApplyingToTotals);
 
             if (couponPromotion != null)
                 couponResult = ApplyCouponResult.BetterPromotionExists;

@@ -1,6 +1,5 @@
 ﻿using LeveLEO.Features.Promotions.Models;
 using LeveLEO.Features.Promotions.Models.LevelConditions;
-using System.Text.Json.Serialization;
 
 namespace LeveLEO.Features.Promotions.DTO;
 
@@ -37,4 +36,10 @@ public class PromotionResponseDto
     public int UsedCount { get; set; }
 
     public ICollection<PromotionTranslationDto> Translations { get; set; } = [];
+
+    /// <summary>
+    /// Унікальний список товарних Id з умов ProductConditions та CartConditions плюс флаги активності.
+    /// Порожній, якщо в умовах немає явних посилань на товари.
+    /// </summary>
+    public ICollection<PromotionReferencedProductDto> ReferencedProducts { get; set; } = [];
 }

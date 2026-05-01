@@ -521,12 +521,20 @@ public class OrderItemReviewService(
 
     private static ReviewResponseDto MapToDto(OrderItemReview review)
     {
+        var product = review.OrderItem.Product;
+        var exists = product != null;
+
         return new ReviewResponseDto
         {
             Id = review.Id,
             OrderItemId = review.OrderItemId,
             ProductId = review.OrderItem.ProductId,
-            ProductName = review.OrderItem.Product.Name,
+            ProductName = product?.Name ?? "Товар",
+            ProductSlug = product?.Slug,
+            ProductMainImageKey = product?.MainImageKey,
+            ProductExistsInCatalog = exists,
+            ProductIsActive = product?.IsActive ?? false,
+            ProductCatalogDisplayState = ProductCatalogDisplayStateHelper.Resolve(exists, product?.IsActive ?? false),
             Rating = review.Rating,
             Comment = review.Comment,
             IsApproved = review.IsApproved,
