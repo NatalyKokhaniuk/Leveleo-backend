@@ -14,6 +14,7 @@ public class DeliveryService(
     AppDbContext db,
     INovaPoshtaService novaPoshtaService,
     IOrderService orderService,
+    IAddressService addressService,
     IConfiguration config,
     ILogger<DeliveryService> logger) : IDeliveryService
 {
@@ -321,33 +322,7 @@ public class DeliveryService(
             UpdatedAt = delivery.UpdatedAt,
             NovaPoshtaDocumentRef = delivery.NovaPoshtaDocumentRef,
             DeliveryCost = delivery.DeliveryCost,
-            Address = new AddressResponseDto
-            {
-                Id = address!.Id,
-                FirstName = address.FirstName,
-                LastName = address.LastName,
-                MiddleName = address.MiddleName,
-                PhoneNumber = address.PhoneNumber,
-                DeliveryType = address.DeliveryType,
-                FormattedAddress = FormatAddress(address),
-                CityName = address.CityName,
-                WarehouseDescription = address.WarehouseDescription,
-                Street = address.Street,
-                House = address.House,
-                Flat = address.Flat,
-                AdditionalInfo = address.AdditionalInfo
-            }
-        };
-    }
-
-    private static string FormatAddress(Address address)
-    {
-        return address.DeliveryType switch
-        {
-            DeliveryType.Warehouse => $"{address.CityName}, {address.WarehouseDescription}",
-            DeliveryType.Doors => $"{address.CityName}, {address.Street} {address.House}" +
-                                  (string.IsNullOrWhiteSpace(address.Flat) ? "" : $", кв. {address.Flat}"),
-            _ => address.CityName ?? ""
+            Address = addressService.MapToDto(address!)
         };
     }
 

@@ -28,7 +28,7 @@ public class AddressController(IAddressService addressService) : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AddressResponseDto>> GetAddressById(Guid id)
     {
-        var address = await addressService.GetAddressByIdAsync(id);
+        var address = await addressService.GetAddressByIdAsync(CurrentUserId, id);
         return Ok(address);
     }
 

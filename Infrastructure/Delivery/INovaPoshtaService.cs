@@ -12,17 +12,23 @@ public interface INovaPoshtaService
     /// </summary>
     Task<SettlementsPageDto> GetSettlementsPageAsync(int page, string? findByString = null);
 
-    /// <summary>Усі поштомати обраного населеного пункту (за Ref з довідника / searchSettlements).</summary>
-    Task<List<WarehouseDto>> GetPostomatsBySettlementAsync(string settlementRef);
+    /// <summary>Поштомати. У параметр <paramref name="deliveryCityRef"/> передавайте <c>deliveryCity</c> з cities/search. Опційний <c>FindByString</c> НП.</summary>
+    Task<List<WarehouseDto>> GetPostomatsBySettlementAsync(string deliveryCityRef, string? findByString = null);
 
-    /// <summary>Усі відділення (не поштомати) з адресами для населеного пункту.</summary>
-    Task<List<WarehouseDto>> GetBranchWarehousesBySettlementAsync(string settlementRef);
+    /// <summary>Відділення (категорія Branch). У параметр передавайте <c>deliveryCity</c> з cities/search. Опційний <c>FindByString</c> НП.</summary>
+    Task<List<WarehouseDto>> GetBranchWarehousesBySettlementAsync(string deliveryCityRef, string? findByString = null);
+
+    /// <summary>Довідник типів складів (<c>getWarehouseTypes</c>); результат кешується на бекенді.</summary>
+    Task<List<WarehouseTypeDto>> GetWarehouseTypesAsync(bool forceRefresh = false);
 
     // Отримання відділень міста (сторінка)
     Task<List<WarehouseDto>> GetWarehousesByCityAsync(string cityRef, int page = 1, int limit = 50);
 
-    // Пошук вулиць
-    Task<List<StreetDto>> SearchStreetsAsync(string cityRef, string query, int limit = 10);
+    /// <summary>Знайти відділення/поштомат за Ref у межах міста (<c>deliveryCity</c> із cities/search). Постранінковий пошук у НП.</summary>
+    Task<WarehouseDto?> GetWarehouseByCityAndRefAsync(string deliveryCityRef, string warehouseRef);
+
+    /// <summary>Пошук вулиць (searchSettlementStreets). <paramref name="settlementRef"/> — Ref населеного пункту з міста.</summary>
+    Task<List<StreetDto>> SearchStreetsAsync(string settlementRef, string streetQuery, int limit = 20);
 
     // Створення ЕН (експрес-накладна)
     Task<InternetDocumentDto> CreateInternetDocumentAsync(CreateInternetDocumentDto dto);

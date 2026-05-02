@@ -48,6 +48,31 @@ public class Address : ITimestamped
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>Один рядок для превью (списки замовлень тощо) з урахуванням НП відділення/поштомату адреси до дверей.</summary>
+    public string GetSummaryDisplayLine()
+    {
+        var city = CityName?.Trim();
+        city ??= string.Empty;
+
+        return DeliveryType switch
+        {
+            DeliveryType.Warehouse =>
+                string.IsNullOrWhiteSpace(WarehouseDescription)
+                    ? $"{city}, Відділення №{WarehouseNumber ?? "?"}"
+                    : $"{city}, {WarehouseDescription.Trim()}",
+
+            DeliveryType.Doors =>
+                $"{city}, {(Street ?? string.Empty).Trim()} {(House ?? string.Empty).Trim()}"
+                    .TrimEnd()
+                + (string.IsNullOrWhiteSpace(Flat) ? "" : $", кв. {Flat.Trim()}"),
+
+            DeliveryType.Postomat =>
+                $"{city}, {(PostomatDescription ?? WarehouseDescription ?? "Поштомат").Trim()}",
+
+            _ => city
+        };
+    }
 }
 
 /// <summary>

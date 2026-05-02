@@ -138,7 +138,7 @@ public class OrderService(
             UpdatedAt = o.UpdatedAt,
             Status = o.Status,
             TotalPayable = o.TotalPayable,
-            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}",
+            AddressSummary = o.Address?.GetSummaryDisplayLine(),
             HasArchivedProducts = archivedOrderIds.Contains(o.Id)
         })];
     }
@@ -730,7 +730,7 @@ public class OrderService(
             CreatedAt = o.CreatedAt,
             Status = o.Status,
             TotalPayable = o.TotalPayable,
-            AddressSummary = $"{o.Address?.CityName}, {o.Address?.Street} {o.Address?.House}",
+            AddressSummary = o.Address?.GetSummaryDisplayLine(),
             HasArchivedProducts = archivedOrderIds.Contains(o.Id),
             UpdatedAt = o.UpdatedAt
         }).ToList();

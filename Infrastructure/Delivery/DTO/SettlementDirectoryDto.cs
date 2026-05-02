@@ -26,4 +26,11 @@ public class SettlementDirectoryDto
     public string? Warehouse { get; set; }
 
     public string? Index { get; set; }
+
+    /// <summary>Як у searchSettlements — якщо НП повертає у getSettlements.</summary>
+    public string? DeliveryCity { get; set; }
+
+    public int? Warehouses { get; set; }
+    public bool? AddressDeliveryAllowed { get; set; }
+    public bool? StreetsAvailability { get; set; }
 }

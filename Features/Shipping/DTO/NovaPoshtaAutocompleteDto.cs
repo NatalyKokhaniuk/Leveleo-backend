@@ -1,22 +1,36 @@
 namespace LeveLEO.Features.Shipping.DTO;
 
-/// <summary>Відповідь для автокомпліту міст (без ключа JSON «ref», зручно для Angular/TS).</summary>
+/// <summary>Відповідь пошуку населених пунктів (як у відповіді НП searchSettlements) для фронтенду.</summary>
 public class CityAutocompleteResponseDto
 {
-    /// <summary>Ref населеного пункту Нової пошти (те саме що раніше в полі Ref).</summary>
-    public required string SettlementRef { get; set; }
+    /// <summary>Ref населеного пункту — для пошуку вулиць.</summary>
+    public string Ref { get; set; } = null!;
 
-    public required string Present { get; set; }
-    public required string MainDescription { get; set; }
+    /// <summary>Ref «міста доставки» НП — для відділень / поштоматів (getWarehouses тощо).</summary>
+    public string DeliveryCity { get; set; } = null!;
 
-    /// <summary>Заголовок для option у випадаючому списку (fallback на mainDescription).</summary>
-    public required string DisplayLabel { get; set; }
-    public required string Area { get; set; }
-    public required string Region { get; set; }
-    public required string SettlementTypeCode { get; set; }
+    public string Present { get; set; } = null!;
+    public string MainDescription { get; set; } = null!;
+    public string Area { get; set; } = null!;
+    public string Region { get; set; } = null!;
+    public string SettlementTypeCode { get; set; } = null!;
+    public int Warehouses { get; set; }
+    public bool AddressDeliveryAllowed { get; set; }
+    public bool StreetsAvailability { get; set; }
+}
 
-    /// <summary>Числовий опис кількості відділень з НП («1» або інше).</summary>
-    public string WarehouseCountHint { get; set; } = "1";
+/// <summary>Елемент результату пошуку вулиць для фронта (AddressGeneral.searchSettlementStreets).</summary>
+public class SettlementStreetSearchItemDto
+{
+    public string SettlementRef { get; set; } = null!;
+
+    public string SettlementStreetRef { get; set; } = null!;
+
+    public string Present { get; set; } = null!;
+
+    public string StreetsType { get; set; } = null!;
+
+    public string StreetsTypeDescription { get; set; } = null!;
 }
 
 /// <summary>Відділення / поштомат для випадаючого списку.</summary>
@@ -39,4 +53,22 @@ public class WarehouseAutocompleteResponseDto
     public string? TypeOfWarehouse { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+}
+
+/// <summary>
+/// Спільний контракт елемента списку для <c>GET .../settlements/{{deliveryCity}}/branches</c>
+/// та <c>GET .../settlements/{{deliveryCity}}/postomats</c> (camelCase у JSON API).
+/// </summary>
+public class SettlementNovaPoshtaWarehouseItemDto
+{
+    public string Ref { get; set; } = null!;
+
+    /// <summary>Зазвичай <c>Branch</c> або <c>Postomat</c> (<see cref="WarehouseDto.CategoryOfWarehouse"/>).</summary>
+    public string Type { get; set; } = null!;
+
+    public string Name { get; set; } = null!;
+    public string ShortAddress { get; set; } = null!;
+    public string CityRef { get; set; } = null!;
+    public double Lat { get; set; }
+    public double Lng { get; set; }
 }

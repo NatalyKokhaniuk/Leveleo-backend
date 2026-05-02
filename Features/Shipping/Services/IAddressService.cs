@@ -12,7 +12,7 @@ public interface IAddressService
 
     Task DeleteAddressAsync(string userId, Guid addressId);
 
-    Task<AddressResponseDto> GetAddressByIdAsync(Guid addressId);
+    Task<AddressResponseDto> GetAddressByIdAsync(string userId, Guid addressId);
 
     Task<List<AddressResponseDto>> GetUserAddressesAsync(string userId);
 

@@ -13,33 +13,79 @@ public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : Contro
 {
     private static CityAutocompleteResponseDto MapCity(CityDto c) => new()
     {
-        SettlementRef = c.Ref,
+        Ref = c.Ref,
+        DeliveryCity = c.DeliveryCity ?? string.Empty,
         Present = c.Present,
         MainDescription = c.MainDescription,
-        DisplayLabel = string.IsNullOrWhiteSpace(c.Present) ? c.MainDescription : c.Present,
         Area = c.Area,
         Region = c.Region,
         SettlementTypeCode = c.SettlementTypeCode,
-        WarehouseCountHint = string.IsNullOrEmpty(c.Warehouse) ? "1" : c.Warehouse
+        Warehouses = c.Warehouses,
+        AddressDeliveryAllowed = c.AddressDeliveryAllowed,
+        StreetsAvailability = c.StreetsAvailability
     };
 
-    private static WarehouseAutocompleteResponseDto MapWarehouse(WarehouseDto w) => new()
+    private static SettlementNovaPoshtaWarehouseItemDto MapBranchContract(WarehouseDto w) => new()
     {
-        WarehouseRef = w.Ref,
-        Description = w.Description,
-        Number = w.Number,
+        Ref = w.Ref,
+        Type = string.IsNullOrEmpty(w.CategoryOfWarehouse) ? "Branch" : w.CategoryOfWarehouse,
+        Name = w.Description,
+        ShortAddress = w.ShortAddress ?? string.Empty,
         CityRef = w.CityRef,
-        CityDescription = w.CityDescription,
-        SettlementRef = w.SettlementRef,
-        SettlementDescription = w.SettlementDescription,
-        ShortAddress = w.ShortAddress,
-        TypeOfWarehouseRef = w.TypeOfWarehouseRef,
-        TypeOfWarehouse = w.TypeOfWarehouse,
-        Latitude = w.Latitude,
-        Longitude = w.Longitude
+        Lat = w.Latitude,
+        Lng = w.Longitude
     };
 
-    /// <summary>Онлайн-пошук населених пунктів (searchSettlements) — зручно для автокомпліту.</summary>
+    private static SettlementNovaPoshtaWarehouseItemDto MapPostomatContract(WarehouseDto w) => new()
+    {
+        Ref = w.Ref,
+        Type = string.IsNullOrEmpty(w.CategoryOfWarehouse) ? "Postomat" : w.CategoryOfWarehouse,
+        Name = w.Description,
+        ShortAddress = w.ShortAddress ?? string.Empty,
+        CityRef = w.CityRef,
+        Lat = w.Latitude,
+        Lng = w.Longitude
+    };
+
+    private static SettlementStreetSearchItemDto MapStreetSearchItem(StreetDto s) => new()
+    {
+        SettlementRef = s.SettlementRef,
+        SettlementStreetRef = s.SettlementStreetRef,
+        Present = s.Present,
+        StreetsType = s.StreetsType,
+        StreetsTypeDescription = s.StreetsTypeDescription
+    };
+
+    /// <summary>Пошук вулиць за Ref населеного пункту (як із <c>cities/search</c> поле <c>ref</c>).</summary>
+    [HttpGet("settlements/{settlementRef}/streets/search")]
+    public async Task<ActionResult<List<SettlementStreetSearchItemDto>>> SearchStreets(
+        string settlementRef,
+        [FromQuery] string query,
+        [FromQuery] int limit = 20)
+    {
+        if (string.IsNullOrWhiteSpace(settlementRef))
+        {
+            return BadRequest("settlementRef is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Ok(new List<SettlementStreetSearchItemDto>());
+        }
+
+        var list = await novaPoshtaService.SearchStreetsAsync(
+            settlementRef.Trim(),
+            query.Trim(),
+            limit > 0 ? limit : 20);
+
+        return Ok(list.ConvertAll(MapStreetSearchItem));
+    }
+
+    /// <summary>
+    /// Онлайн-пошук населених пунктів (searchSettlements).
+    /// Відповідь збігається з формою НП: <c>ref</c> для вулиць, <c>deliveryCity</c> для відділень/поштоматів у <c>/settlements/{{deliveryCity}}/…</c>.
+    /// Записи без обох ref відфільтровані.
+    /// </summary>
     [HttpGet("cities/search")]
     public async Task<ActionResult<List<CityAutocompleteResponseDto>>> SearchCities(
         [FromQuery] string query,
@@ -51,7 +97,11 @@ public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : Contro
         }
 
         var cities = await novaPoshtaService.SearchCitiesAsync(query.Trim(), limit > 0 ? limit : 20);
-        return Ok(cities.ConvertAll(MapCity));
+        var dto = cities
+            .ConvertAll(MapCity)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Ref) && !string.IsNullOrWhiteSpace(x.DeliveryCity))
+            .ToList();
+        return Ok(dto);
     }
 
     /// <summary>Сторінка довідника населених пунктів НП (getSettlements). Перебирайте page, доки hasMore == true.</summary>
@@ -64,29 +114,48 @@ public class NovaPoshtaController(INovaPoshtaService novaPoshtaService) : Contro
         return Ok(result);
     }
 
-    /// <summary>Усі поштомати для обраного населеного пункту (Ref з search або довідника).</summary>
+    /// <summary>
+    /// Лише поштомати: після <c>getWarehouses</c> залишаються точки, класифіковані як поштомат
+    /// (довідник <c>getWarehouseTypes</c>, інакше — <c>CategoryOfWarehouse</c> / опис).
+    /// Відділення сюди не потрапляють — див. <see cref="GetBranches"/>.
+    /// У шляху — ref міста доставки або населеного пункту (як у пошуку міст).
+    /// </summary>
     [HttpGet("settlements/{settlementRef}/postomats")]
-    public async Task<ActionResult<List<WarehouseAutocompleteResponseDto>>> GetPostomats(string settlementRef)
+    public async Task<ActionResult<List<SettlementNovaPoshtaWarehouseItemDto>>> GetPostomats(
+        string settlementRef,
+        [FromQuery] string? findByString = null)
     {
         if (string.IsNullOrWhiteSpace(settlementRef))
         {
             return BadRequest("settlementRef is required.");
         }
 
-        var list = await novaPoshtaService.GetPostomatsBySettlementAsync(settlementRef.Trim());
-        return Ok(list.ConvertAll(MapWarehouse));
+        var list = await novaPoshtaService.GetPostomatsBySettlementAsync(
+            settlementRef.Trim(),
+            string.IsNullOrWhiteSpace(findByString) ? null : findByString.Trim());
+
+        return Ok(list.ConvertAll(MapPostomatContract));
     }
 
-    /// <summary>Усі відділення (не поштомати) з адресами для населеного пункту.</summary>
+    /// <summary>
+    /// Відділення та інші точки, що не є поштоматами: той самий запит до НП, що й для поштоматів,
+    /// але з відповіді прибираються поштомати (див. <see cref="GetPostomats"/>).
+    /// Якщо є <c>findByString</c> — пошук як у кабінеті НП по місту.
+    /// </summary>
     [HttpGet("settlements/{settlementRef}/branches")]
-    public async Task<ActionResult<List<WarehouseAutocompleteResponseDto>>> GetBranches(string settlementRef)
+    public async Task<ActionResult<List<SettlementNovaPoshtaWarehouseItemDto>>> GetBranches(
+        string settlementRef,
+        [FromQuery] string? findByString = null)
     {
         if (string.IsNullOrWhiteSpace(settlementRef))
         {
             return BadRequest("settlementRef is required.");
         }
 
-        var list = await novaPoshtaService.GetBranchWarehousesBySettlementAsync(settlementRef.Trim());
-        return Ok(list.ConvertAll(MapWarehouse));
+        var list = await novaPoshtaService.GetBranchWarehousesBySettlementAsync(
+            settlementRef.Trim(),
+            string.IsNullOrWhiteSpace(findByString) ? null : findByString.Trim());
+
+        return Ok(list.ConvertAll(MapBranchContract));
     }
 }
