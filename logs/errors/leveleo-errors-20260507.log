@@ -1,0 +1,4 @@
+2026-05-07 00:17:24.711 +03:00 [ERR] [Microsoft.EntityFrameworkCore.Database.Command] Failed executing DbCommand (212ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";

@@ -26,6 +26,17 @@ public class LiqPayStatusResponseDto
     [JsonPropertyName("create_date")]
     public long? CreateDate { get; set; }
 
+    /// <summary>Відповідь action=status: транзакції ще немає у LiqPay (до відкриття checkout клієнтом).</summary>
+    [JsonPropertyName("err_code")]
+    public string? ErrCode { get; set; }
+
+    /// <summary>Дубль коду помилки в деяких відповідях LiqPay.</summary>
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+
+    [JsonPropertyName("result")]
+    public string? Result { get; set; }
+
     public DateTime? CreatedAt => CreateDate.HasValue
         ? DateTimeOffset.FromUnixTimeSeconds(CreateDate.Value).UtcDateTime
         : null;

@@ -5,18 +5,27 @@ using LeveLEO.Features.Promotions.DTO;
 using LeveLEO.Features.Promotions.Models;
 using LeveLEO.Features.Promotions.Models.LevelConditions;
 using LeveLEO.Features.ShoppingCarts.DTO;
+using LeveLEO.Infrastructure.Caching;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
 using LeveLEO.Infrastructure.SlugGenerator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LeveLEO.Features.Promotions.Services;
 
-public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerator slugGenerator) : IPromotionService
+public class PromotionService(
+    AppDbContext db,
+    IEventBus eventBus,
+    ISlugGenerator slugGenerator,
+    ICacheService cache,
+    ILogger<PromotionService> logger) : IPromotionService
 {
     private readonly AppDbContext _db = db;
     private readonly IEventBus _eventBus = eventBus;
     private readonly ISlugGenerator _slugGenerator = slugGenerator;
+    private readonly ICacheService _cache = cache;
+    private readonly ILogger<PromotionService> _logger = logger;
 
     #region CRUD
 
@@ -60,6 +69,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
 
         _db.Promotions.Add(promotion);
         await _db.SaveChangesAsync();
+        await InvalidateProductCachesAsync();
         await _eventBus.PublishAsync(new PromotionCreatedEvent
         {
             PromotionId = promotion.Id,
@@ -144,6 +154,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
             promotion.CartConditions);
 
         await _db.SaveChangesAsync();
+        await InvalidateProductCachesAsync();
 
         return await MapSinglePromotionToDtoAsync(promotion, includeSensitiveCouponFields: true);
     }
@@ -159,7 +170,10 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
         }
 
         if (changed)
+        {
             await _db.SaveChangesAsync();
+            await InvalidateProductCachesAsync();
+        }
     }
 
     private async Task<List<PromotionResponseDto>> MapPromotionsToDtosAsync(
@@ -330,6 +344,21 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
 
         _db.Promotions.Remove(promotion);
         await _db.SaveChangesAsync();
+        await InvalidateProductCachesAsync();
+    }
+
+    private async Task InvalidateProductCachesAsync()
+    {
+        try
+        {
+            await _cache.RemoveByPatternAsync(CacheKeys.ProductsPattern);
+            await _cache.RemoveAsync(CacheKeys.FeaturedReviews);
+            _logger.LogDebug("Product caches invalidated after promotion change");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to invalidate product caches after promotion change");
+        }
     }
 
     #endregion CRUD
@@ -362,8 +391,7 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
                 p.StartDate <= now &&
                 p.EndDate >= now &&
                 p.DiscountType != null &&
-                p.DiscountValue != null &&
-                p.ProductConditions != null)
+                p.DiscountValue != null)
             .ToListAsync();
 
         var result = new Dictionary<Guid, (decimal?, Promotion?)>();
@@ -677,8 +705,9 @@ public class PromotionService(AppDbContext db, IEventBus eventBus, ISlugGenerato
     Product product)
     {
         var cond = promo.ProductConditions;
+        // Без умов — акція на весь каталог (доступні товари)
         if (cond == null)
-            return false;
+            return true;
 
         // Якщо задані конкретні продукти
         if (cond.ProductIds.HasValue &&

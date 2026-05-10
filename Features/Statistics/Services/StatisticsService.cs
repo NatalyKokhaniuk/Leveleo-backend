@@ -1,5 +1,6 @@
 using LeveLEO.Data;
 using LeveLEO.Features.Orders.Models;
+using LeveLEO.Features.Promotions.Models;
 using LeveLEO.Features.Statistics.DTO;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -69,8 +70,7 @@ public class StatisticsService(AppDbContext db) : IStatisticsService
     public async Task<List<ProductSalesStatsDto>> GetTopSellingProductsAsync(SalesReportFilterDto filter, int topN = 10)
     {
         var query = db.OrderItems
-            .Include(oi => oi.Order)
-            .Include(oi => oi.Product)
+            .AsNoTracking()
             .Where(oi => oi.Order.Status == OrderStatus.Completed);
 
         if (filter.StartDate.HasValue)
@@ -85,7 +85,8 @@ public class StatisticsService(AppDbContext db) : IStatisticsService
         if (filter.BrandId.HasValue)
             query = query.Where(oi => oi.Product.BrandId == filter.BrandId.Value);
 
-        var productStats = await query
+        // Не робимо AVG(discounted_unit_price) у SQL — Npgsql декодує складні numeric із AVG у decimal нестабільно (PgNumeric.IndexOutOfRange).
+        var productStatsRows = await query
             .GroupBy(oi => new
             {
                 oi.ProductId,
@@ -93,21 +94,29 @@ public class StatisticsService(AppDbContext db) : IStatisticsService
                 oi.Product.Slug,
                 oi.Product.StockQuantity
             })
-            .Select(g => new ProductSalesStatsDto
+            .Select(g => new
             {
-                ProductId = g.Key.ProductId,
-                ProductName = g.Key.Name,
-                ProductSlug = g.Key.Slug,
+                g.Key.ProductId,
+                Name = g.Key.Name,
+                Slug = g.Key.Slug,
+                StockQuantity = g.Key.StockQuantity,
                 UnitsSold = g.Sum(oi => oi.Quantity),
-                TotalRevenue = g.Sum(oi => oi.DiscountedUnitPrice * oi.Quantity),
-                AveragePrice = g.Average(oi => oi.DiscountedUnitPrice),
-                CurrentStock = g.Key.StockQuantity
+                TotalRevenue = g.Sum(oi => oi.DiscountedUnitPrice * oi.Quantity)
             })
-            .OrderByDescending(p => p.UnitsSold)
+            .OrderByDescending(r => r.UnitsSold)
             .Take(topN)
             .ToListAsync();
 
-        return productStats;
+        return productStatsRows.ConvertAll(r => new ProductSalesStatsDto
+        {
+            ProductId = r.ProductId,
+            ProductName = r.Name,
+            ProductSlug = r.Slug,
+            UnitsSold = r.UnitsSold,
+            TotalRevenue = r.TotalRevenue,
+            AveragePrice = r.UnitsSold > 0 ? decimal.Round(r.TotalRevenue / r.UnitsSold, 4, MidpointRounding.AwayFromZero) : 0,
+            CurrentStock = r.StockQuantity
+        });
     }
 
     public async Task<List<ProductStockHistoryDto>> GetProductStockStatusAsync()
@@ -157,42 +166,68 @@ public class StatisticsService(AppDbContext db) : IStatisticsService
     {
         var now = DateTimeOffset.UtcNow;
 
-        var promotionsQuery = db.Promotions.AsQueryable();
+        var promotionsQuery = db.Promotions.AsNoTracking().AsQueryable();
 
         if (activeOnly)
         {
-            promotionsQuery = promotionsQuery.Where(p =>
-                p.IsActive &&
-                (p.StartDate <= now) &&
-                (p.EndDate >= now)
-            );
+            promotionsQuery = promotionsQuery.Where(p => p.StartDate <= now && p.EndDate >= now);
         }
 
         var promotions = await promotionsQuery.ToListAsync();
-
         var stats = new List<PromotionStatsDto>();
 
         foreach (var promo in promotions)
         {
-            var ordersWithPromo = await db.Orders
-                .Where(o => o.Status == OrderStatus.Completed && o.TotalCartDiscount > 0)
+            var isLive = promo.StartDate <= now && promo.EndDate >= now;
+
+            var orderQuery = db.Orders.AsNoTracking().Where(o => o.Status == OrderStatus.Completed);
+
+            if (promo.Level == PromotionLevel.Cart)
+            {
+                // У поточній схемі БД немає знімка промо/купона на замовленні — без нього не можна безпомилково
+                // прив’язати completed-замовлення до конкретної акції рівня кошика (суми TotalCartDiscount спільні).
+                orderQuery = orderQuery.Where(o => false);
+            }
+            else
+            {
+                var prodIds = promo.ProductConditions?.GetProductIdsOrEmpty() ?? [];
+                var catIds = promo.ProductConditions?.GetCategoryIdsOrEmpty() ?? [];
+
+                if (prodIds.Count == 0 && catIds.Count == 0)
+                {
+                    orderQuery = orderQuery.Where(o => false);
+                }
+                else
+                {
+                    orderQuery = orderQuery
+                        .Where(o => o.TotalProductDiscount > 0)
+                        .Where(o => o.OrderItems.Any(oi =>
+                            (prodIds.Count > 0 && prodIds.Contains(oi.ProductId))
+                            || (catIds.Count > 0
+                                && db.Products.Any(p =>
+                                    p.Id == oi.ProductId && catIds.Contains(p.CategoryId)))));
+                }
+            }
+
+            var rows = await orderQuery
+                .Select(o => new { o.TotalPayable, o.TotalCartDiscount, o.TotalProductDiscount, o.UserId })
                 .ToListAsync();
 
-            var uniqueCustomers = ordersWithPromo.Select(o => o.UserId).Distinct().Count();
+            var discountSum = promo.Level == PromotionLevel.Cart
+                ? rows.Sum(o => o.TotalCartDiscount)
+                : rows.Sum(o => o.TotalProductDiscount);
 
             stats.Add(new PromotionStatsDto
             {
                 PromotionId = promo.Id,
                 PromotionName = promo.Name,
-                IsActive = promo.IsActive &&
-                          (promo.StartDate <= now) &&
-                          (promo.EndDate >= now),
+                IsActive = isLive,
                 StartDate = promo.StartDate,
                 EndDate = promo.EndDate,
-                OrdersWithPromotion = ordersWithPromo.Count,
-                TotalDiscountGiven = ordersWithPromo.Sum(o => o.TotalCartDiscount + o.TotalProductDiscount),
-                TotalRevenueWithPromotion = ordersWithPromo.Sum(o => o.TotalPayable),
-                UniqueCustomers = uniqueCustomers
+                OrdersWithPromotion = rows.Count,
+                TotalDiscountGiven = discountSum,
+                TotalRevenueWithPromotion = rows.Sum(o => o.TotalPayable),
+                UniqueCustomers = rows.Select(o => o.UserId).Distinct().Count()
             });
         }
 

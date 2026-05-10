@@ -7,14 +7,14 @@ public class CreateOrderResultDto
 {
     public Guid OrderId { get; set; }
 
-    /// <summary>Base64 LiqPay checkout <c>data</c>; same meaning as <see cref="Payload"/>.</summary>
+    /// <summary>Base64 JSON для поля <c>data</c> у form POST на LiqPay Checkout API v3 (<c>https://www.liqpay.ua/api/3/checkout</c>); те саме, що <see cref="Payload"/>.</summary>
     [JsonPropertyName("data")]
     public string? Data { get; set; }
 
-    /// <summary>Same as <see cref="Data"/> — included for clients that read <c>payload</c>.</summary>
+    /// <summary>Те саме, що <see cref="Data"/> — для клієнтів із полем <c>payload</c>.</summary>
     public string? Payload { get; set; }
 
-    /// <summary>LiqPay checkout <c>signature</c> (base64 SHA-1 of <c>private_key + data + private_key</c> per LiqPay).</summary>
+    /// <summary>Поле <c>signature</c>: base64 SHA-1 від <c>private_key + data + private_key</c> (LiqPay).</summary>
     public string? Signature { get; set; }
 
     public ShoppingCartDto? ShoppingCart { get; set; }

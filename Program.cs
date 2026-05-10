@@ -104,6 +104,9 @@ var jwtSettings = new JwtSettings
 
 builder.Services.AddSingleton(jwtSettings);
 
+builder.Services.Configure<CheckoutClientHintsOptions>(
+    builder.Configuration.GetSection(CheckoutClientHintsOptions.SectionName));
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -215,7 +218,8 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddTransient<ISmsSender, SmsSender>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<ISlugGenerator, SlugGenerator>();
-builder.Services.AddScoped<ILiqPayService, LiqPayService>();
+// Типізований HttpClient для LiqPay (POST https://www.liqpay.ua/api/request)
+builder.Services.AddHttpClient<ILiqPayService, LiqPayService>();
 builder.Services.AddHttpClient<INovaPoshtaService, NovaPoshtaService>();
 builder.Services.AddScoped<IProductMediaService, ProductMediaService>();
 builder.Services.AddHttpClient();

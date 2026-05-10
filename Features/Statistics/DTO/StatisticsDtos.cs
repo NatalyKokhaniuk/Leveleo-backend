@@ -53,7 +53,9 @@ public class ProductStockHistoryDto
 }
 
 /// <summary>
-/// Статистика по промоакціях
+/// Статистика по промоакціях. Для акцій рівня товару — completed-замовлення з <c>totalProductDiscount</c> &gt; 0
+/// та рядками під умовами акції (можливе перекриття між акціями).
+/// Для акцій рівня кошика метрики за замовленнями не заповнюються, поки в схемі замовлення немає поля прив’язки до промо/купона.
 /// </summary>
 public class PromotionStatsDto
 {
@@ -63,6 +65,8 @@ public class PromotionStatsDto
     public DateTimeOffset? StartDate { get; set; }
     public DateTimeOffset? EndDate { get; set; }
     public int OrdersWithPromotion { get; set; }
+
+    /// <summary>Для акції кошика — сума <c>totalCartDiscount</c> по відібраних замовленнях; для акції товару — <c>totalProductDiscount</c> (при кількох акціях на один кошик суми можуть перетинатися між рядками звіту).</summary>
     public decimal TotalDiscountGiven { get; set; }
     public decimal TotalRevenueWithPromotion { get; set; }
     public int UniqueCustomers { get; set; }

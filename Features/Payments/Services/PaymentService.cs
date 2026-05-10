@@ -204,11 +204,21 @@ public class PaymentService(
 
     private static void ApplyLiqPayStatusToPayment(Payment payment, LiqPayStatusResponseDto liq)
     {
+        var liqErrorCode = liq.ErrCode ?? liq.Code;
+        if (string.Equals(liqErrorCode, "payment_not_found", StringComparison.OrdinalIgnoreCase))
+        {
+            // У LiqPay ще немає запису з цим order_id — нормально до POST клієнта на /api/3/checkout.
+            return;
+        }
+
         var raw = liq.Status?.Trim().ToLowerInvariant();
         payment.Status = raw switch
         {
             "success" or "sandbox" or "pending" or "wait_accept" => PaymentStatus.Success,
-            "failure" or "error" => PaymentStatus.Failure,
+            "failure" => PaymentStatus.Failure,
+            // Помилка без payment_id у LiqPay — ще немає транзакції (типово до відкриття checkout),
+            // не плутаємо з відмовою після оплати.
+            "error" => liq.PaymentId.HasValue ? PaymentStatus.Failure : PaymentStatus.Pending,
             "reversed" => PaymentStatus.Refunded,
             _ => PaymentStatus.Pending
         };

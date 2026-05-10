@@ -1,4 +1,5 @@
 ﻿using LeveLEO.Features.Payments.Models;
+using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -7,7 +8,7 @@ using System.Text.Json.Serialization;
 
 namespace LeveLEO.Infrastructure.Payments;
 
-public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqPayService
+public class LiqPayService(IConfiguration config, HttpClient httpClient, ILogger<LiqPayService> logger) : ILiqPayService
 {
     private const string LiqPayRequestUrl = "https://www.liqpay.ua/api/request";
 
@@ -155,7 +156,7 @@ public class LiqPayService(IConfiguration config, HttpClient httpClient) : ILiqP
         var signature = GenerateSignature(data);
 
         var rawResponse = await PostLiqPayFormAsync(data, signature);
-        Console.WriteLine($"LiqPay status raw response for {orderId}: {rawResponse}");
+        logger.LogDebug("LiqPay status raw response for {OrderId}: {RawResponse}", orderId, rawResponse);
         using var doc = JsonDocument.Parse(rawResponse);
         var root = doc.RootElement;
 
