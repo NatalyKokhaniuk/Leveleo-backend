@@ -92,11 +92,186 @@ internal static class PromotionConditionProductRefs
         return changed;
     }
 
-    private static bool IsProductLevelWithoutTargeting(ProductLevelCondition plc)
+    internal static bool IsProductLevelWithoutTargeting(ProductLevelCondition plc)
     {
         bool hasProd = plc.ProductIds.HasValue && plc.ProductIds.Value != null && plc.ProductIds.Value.Count > 0;
         bool hasCat = plc.CategoryIds.HasValue && plc.CategoryIds.Value != null && plc.CategoryIds.Value.Count > 0;
         return !hasProd && !hasCat;
+    }
+
+    internal static bool HasProductOrCategoryTargeting(
+        Optional<List<Guid>> productIds,
+        Optional<List<Guid>> categoryIds)
+    {
+        return HasNonEmptyIdList(productIds) || HasNonEmptyIdList(categoryIds);
+    }
+
+    private static bool HasNonEmptyIdList(Optional<List<Guid>> opt)
+        => opt.Value is { Count: > 0 };
+
+    internal static HashSet<Guid> CollectCategoryIdsFromPromotions(IEnumerable<Promotion> promotions)
+    {
+        var set = new HashSet<Guid>();
+        foreach (var promotion in promotions)
+        {
+            if (promotion.ProductConditions?.CategoryIds.Value is { Count: > 0 } productCats)
+            {
+                foreach (var id in productCats)
+                    set.Add(id);
+            }
+
+            if (promotion.CartConditions?.CategoryIds.Value is { Count: > 0 } cartCats)
+            {
+                foreach (var id in cartCats)
+                    set.Add(id);
+            }
+        }
+
+        return set;
+    }
+
+    /// <summary>
+    /// Для кожного предка — усі нащадкові categoryId (включно з самим предком).
+    /// </summary>
+    internal static async Task<Dictionary<Guid, HashSet<Guid>>> BuildCategoryDescendantMapAsync(
+        AppDbContext db,
+        IEnumerable<Guid> ancestorCategoryIds)
+    {
+        var ancestorList = ancestorCategoryIds.Distinct().ToList();
+        var map = new Dictionary<Guid, HashSet<Guid>>();
+
+        if (ancestorList.Count == 0)
+            return map;
+
+        foreach (var ancestorId in ancestorList)
+            map[ancestorId] = [];
+
+        var rows = await db.CategoryClosures
+            .AsNoTracking()
+            .Where(c => ancestorList.Contains(c.AncestorId))
+            .Select(c => new { c.AncestorId, c.DescendantId })
+            .ToListAsync();
+
+        foreach (var row in rows)
+            map[row.AncestorId].Add(row.DescendantId);
+
+        return map;
+    }
+
+    internal static bool ProductCategoryMatchesPromotionCategories(
+        Guid productCategoryId,
+        IReadOnlyList<Guid> promotionCategoryIds,
+        IReadOnlyDictionary<Guid, HashSet<Guid>> categoryDescendantMap)
+    {
+        foreach (var ancestorId in promotionCategoryIds)
+        {
+            if (categoryDescendantMap.TryGetValue(ancestorId, out var descendants) &&
+                descendants.Contains(productCategoryId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Усі productId, на які поширюється акція (явні товари, категорії з підкатегоріями, або весь каталог).
+    /// </summary>
+    internal static async Task<HashSet<Guid>> ResolvePromotionReferencedProductIdsAsync(
+        AppDbContext db,
+        Promotion promotion,
+        bool activeOnly = false)
+    {
+        var ids = new HashSet<Guid>();
+
+        if (promotion.Level == PromotionLevel.Product)
+        {
+            if (promotion.ProductConditions == null)
+            {
+                await AddAllProductIdsAsync(db, ids, activeOnly);
+            }
+            else
+            {
+                await AddResolvedProductIdsAsync(
+                    db,
+                    ids,
+                    promotion.ProductConditions.ProductIds,
+                    promotion.ProductConditions.CategoryIds,
+                    activeOnly);
+            }
+        }
+
+        if (promotion.CartConditions != null)
+        {
+            await AddResolvedProductIdsAsync(
+                db,
+                ids,
+                promotion.CartConditions.ProductIds,
+                promotion.CartConditions.CategoryIds,
+                activeOnly);
+        }
+        else if (promotion.Level == PromotionLevel.Cart)
+        {
+            await AddAllProductIdsAsync(db, ids, activeOnly);
+        }
+
+        return ids;
+    }
+
+    private static async Task AddResolvedProductIdsAsync(
+        AppDbContext db,
+        HashSet<Guid> ids,
+        Optional<List<Guid>> productIdsOpt,
+        Optional<List<Guid>> categoryIdsOpt,
+        bool activeOnly)
+    {
+        if (!HasProductOrCategoryTargeting(productIdsOpt, categoryIdsOpt))
+        {
+            await AddAllProductIdsAsync(db, ids, activeOnly);
+            return;
+        }
+
+        if (productIdsOpt.Value is { Count: > 0 } explicitIds)
+        {
+            foreach (var id in explicitIds)
+                ids.Add(id);
+        }
+
+        if (categoryIdsOpt.Value is not { Count: > 0 } catIds)
+            return;
+
+        var descendantCategoryIds = await db.CategoryClosures
+            .AsNoTracking()
+            .Where(c => catIds.Contains(c.AncestorId))
+            .Select(c => c.DescendantId)
+            .Distinct()
+            .ToListAsync();
+
+        var productQuery = db.Products
+            .AsNoTracking()
+            .Where(p => descendantCategoryIds.Contains(p.CategoryId));
+
+        if (activeOnly)
+            productQuery = productQuery.Where(p => p.IsActive);
+
+        var categoryProductIds = await productQuery
+            .Select(p => p.Id)
+            .ToListAsync();
+
+        foreach (var id in categoryProductIds)
+            ids.Add(id);
+    }
+
+    private static async Task AddAllProductIdsAsync(AppDbContext db, HashSet<Guid> ids, bool activeOnly)
+    {
+        var query = db.Products.AsNoTracking();
+        if (activeOnly)
+            query = query.Where(p => p.IsActive);
+
+        var allIds = await query.Select(p => p.Id).ToListAsync();
+        foreach (var id in allIds)
+            ids.Add(id);
     }
 
     private static bool IsCartLevelWithoutAnyCondition(CartLevelCondition clc)

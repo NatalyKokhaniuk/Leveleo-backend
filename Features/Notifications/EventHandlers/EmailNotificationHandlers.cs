@@ -1,3 +1,4 @@
+using LeveLEO.Infrastructure.Common;
 using LeveLEO.Infrastructure.Email;
 using LeveLEO.Infrastructure.Events;
 using LeveLEO.Infrastructure.Events.DomainEvents;
@@ -14,6 +15,7 @@ namespace LeveLEO.Features.Notifications.EventHandlers;
 public class OrderCreatedEmailHandler(
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<OrderCreatedEmailHandler> logger) : IEventHandler<OrderCreatedEvent>
 {
     public async Task HandleAsync(OrderCreatedEvent @event)
@@ -32,7 +34,7 @@ public class OrderCreatedEmailHandler(
                 { "{{TOTAL_PRODUCT_DISCOUNT}}", FormatCurrency(@event.TotalProductDiscount) },
                 { "{{TOTAL_CART_DISCOUNT}}", FormatCurrency(@event.TotalCartDiscount) },
                 { "{{TOTAL_PAYABLE}}", FormatCurrency(@event.TotalPayable) },
-                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+                { "{{ORDER_LINK}}", frontendUrls.Order(@event.OrderId) }
             };
 
             var body = await templateService.GetTemplateAsync("OrderCreated", replacements);
@@ -102,6 +104,7 @@ public class OrderCreatedEmailHandler(
 public class OrderPaidEmailHandler(
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<OrderPaidEmailHandler> logger) : IEventHandler<OrderPaidEvent>
 {
     public async Task HandleAsync(OrderPaidEvent @event)
@@ -114,7 +117,7 @@ public class OrderPaidEmailHandler(
             {
                 { "{{ORDER_NUMBER}}", @event.OrderNumber },
                 { "{{AMOUNT_PAID}}", $"{@event.AmountPaid:C}" },
-                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+                { "{{ORDER_LINK}}", frontendUrls.Order(@event.OrderId) }
             };
 
             var body = await templateService.GetTemplateAsync("OrderPaid", replacements);
@@ -136,6 +139,7 @@ public class OrderPaidEmailHandler(
 public class OrderShippedEmailHandler(
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<OrderShippedEmailHandler> logger) : IEventHandler<OrderShippedEvent>
 {
     public async Task HandleAsync(OrderShippedEvent @event)
@@ -152,7 +156,7 @@ public class OrderShippedEmailHandler(
             {
                 { "{{ORDER_NUMBER}}", @event.OrderNumber },
                 { "{{TRACKING_INFO}}", trackingInfo },
-                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+                { "{{ORDER_LINK}}", frontendUrls.Order(@event.OrderId) }
             };
 
             var body = await templateService.GetTemplateAsync("OrderShipped", replacements);
@@ -174,6 +178,7 @@ public class OrderShippedEmailHandler(
 public class OrderCompletedEmailHandler(
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<OrderCompletedEmailHandler> logger) : IEventHandler<OrderCompletedEvent>
 {
     public async Task HandleAsync(OrderCompletedEvent @event)
@@ -185,7 +190,7 @@ public class OrderCompletedEmailHandler(
             var replacements = new Dictionary<string, string>
             {
                 { "{{ORDER_NUMBER}}", @event.OrderNumber },
-                { "{{ORDER_LINK}}", $"https://leveleo.com/orders/{@event.OrderId}" }
+                { "{{ORDER_LINK}}", frontendUrls.Order(@event.OrderId) }
             };
 
             var body = await templateService.GetTemplateAsync("OrderCompleted", replacements);
@@ -207,6 +212,7 @@ public class OrderCompletedEmailHandler(
 public class ReviewApprovedEmailHandler(
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<ReviewApprovedEmailHandler> logger) : IEventHandler<ReviewApprovedEvent>
 {
     public async Task HandleAsync(ReviewApprovedEvent @event)
@@ -217,7 +223,7 @@ public class ReviewApprovedEmailHandler(
 
             var replacements = new Dictionary<string, string>
             {
-                { "{{PRODUCT_LINK}}", $"https://leveleo.com/products/{@event.ProductId}" }
+                { "{{PRODUCT_LINK}}", frontendUrls.ProductById(@event.ProductId) }
             };
 
             var body = await templateService.GetTemplateAsync("ReviewApproved", replacements);
@@ -239,6 +245,7 @@ public class ReviewApprovedEmailHandler(
 public class ReviewRejectedEmailHandler(
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<ReviewRejectedEmailHandler> logger) : IEventHandler<ReviewRejectedEvent>
 {
     public async Task HandleAsync(ReviewRejectedEvent @event)
@@ -249,7 +256,7 @@ public class ReviewRejectedEmailHandler(
 
             var replacements = new Dictionary<string, string>
             {
-                { "{{ORDER_LINK}}", $"https://leveleo.com/my-reviews" }
+                { "{{ORDER_LINK}}", frontendUrls.MyReviews() }
             };
 
             var body = await templateService.GetTemplateAsync("ReviewRejected", replacements);

@@ -2,6 +2,7 @@ using LeveLEO.Data;
 using LeveLEO.Features.Identity.Models;
 using LeveLEO.Features.Newsletter.DTO;
 using LeveLEO.Features.Newsletter.Models;
+using LeveLEO.Infrastructure.Common;
 using LeveLEO.Infrastructure.Email;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -15,6 +16,7 @@ public class NewsletterService(
     AppDbContext db,
     IEmailSender emailSender,
     IEmailTemplateService templateService,
+    IFrontendUrlBuilder frontendUrls,
     ILogger<NewsletterService> logger,
     UserManager<ApplicationUser> userManager
         ) : INewsletterService
@@ -253,11 +255,10 @@ public class NewsletterService(
     {
         var subject = "Ласкаво просимо до LeveLEO! 🎸";
 
-        var unsubscribeLink = $"https://leveleo.com/newsletter/unsubscribe?token={subscriber.UnsubscribeToken}";
-
         var replacements = new Dictionary<string, string>
         {
-            { "{{UNSUBSCRIBE_LINK}}", unsubscribeLink }
+            { "{{HOME_LINK}}", frontendUrls.Home() },
+            { "{{UNSUBSCRIBE_LINK}}", frontendUrls.NewsletterUnsubscribe(subscriber.UnsubscribeToken) }
         };
 
         var body = await templateService.GetTemplateAsync("NewsletterWelcome", replacements);
@@ -269,17 +270,14 @@ public class NewsletterService(
     {
         var subject = $"🎉 Новинка в LeveLEO: {product.ProductName}";
 
-        var productLink = $"https://leveleo.com/products/{product.ProductSlug}";
-        var unsubscribeLink = $"https://leveleo.com/newsletter/unsubscribe?token={subscriber.UnsubscribeToken}";
-
         var replacements = new Dictionary<string, string>
         {
             { "{{PRODUCT_NAME}}", product.ProductName },
             { "{{PRODUCT_PRICE}}", $"{product.Price:C}" },
             { "{{PRODUCT_DESCRIPTION}}", product.ShortDescription ?? "Переглянути деталі на сайті" },
-            { "{{PRODUCT_IMAGE}}", product.MainImageUrl ?? "https://leveleo.com/images/placeholder.jpg" },
-            { "{{PRODUCT_LINK}}", productLink },
-            { "{{UNSUBSCRIBE_LINK}}", unsubscribeLink }
+            { "{{PRODUCT_IMAGE}}", product.MainImageUrl ?? frontendUrls.PlaceholderImage() },
+            { "{{PRODUCT_LINK}}", frontendUrls.Product(product.ProductSlug) },
+            { "{{UNSUBSCRIBE_LINK}}", frontendUrls.NewsletterUnsubscribe(subscriber.UnsubscribeToken) }
         };
 
         var body = await templateService.GetTemplateAsync("NewsletterNewProduct", replacements);
@@ -311,9 +309,6 @@ public class NewsletterService(
     {
         var subject = $"🔥 Нова акція в LeveLEO: {promotion.PromotionName}";
 
-        var promotionLink = "https://leveleo.com/promotions";
-        var unsubscribeLink = $"https://leveleo.com/newsletter/unsubscribe?token={subscriber.UnsubscribeToken}";
-
         // Форматувати знижку в залежності від типу
         var discountDisplay = promotion.DiscountType == "Percentage"
             ? $"{promotion.DiscountValue}%"
@@ -336,8 +331,8 @@ public class NewsletterService(
             { "{{DISCOUNT_VALUE}}", discountDisplay },
             { "{{VALID_UNTIL}}", promotion.EndDate.ToString("dd.MM.yyyy") },
             { "{{COUPON_INFO}}", couponInfo },
-            { "{{PROMOTION_LINK}}", promotionLink },
-            { "{{UNSUBSCRIBE_LINK}}", unsubscribeLink }
+            { "{{PROMOTION_LINK}}", frontendUrls.Promotions() },
+            { "{{UNSUBSCRIBE_LINK}}", frontendUrls.NewsletterUnsubscribe(subscriber.UnsubscribeToken) }
         };
 
         var body = await templateService.GetTemplateAsync("NewsletterNewPromotion", replacements);

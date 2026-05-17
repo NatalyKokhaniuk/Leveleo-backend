@@ -1,5 +1,6 @@
 using LeveLEO.Features.Newsletter.DTO;
 using LeveLEO.Features.Newsletter.Services;
+using LeveLEO.Infrastructure.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,13 +11,16 @@ namespace LeveLEO.Features.Newsletter.Controllers;
 public class NewsletterController : ControllerBase
 {
     private readonly INewsletterService _newsletterService;
+    private readonly IFrontendUrlBuilder _frontendUrls;
     private readonly ILogger<NewsletterController> _logger;
 
     public NewsletterController(
         INewsletterService newsletterService,
+        IFrontendUrlBuilder frontendUrls,
         ILogger<NewsletterController> logger)
     {
         _newsletterService = newsletterService;
+        _frontendUrls = frontendUrls;
         _logger = logger;
     }
 
@@ -76,7 +80,7 @@ public class NewsletterController : ControllerBase
     <div class='container'>
         <h1>😢 {(result.IsSubscribed ? "Помилка" : "Відписка виконана")}</h1>
         <p>{result.Message}</p>
-        <p><a href='https://leveleo.com'>← Повернутися на головну</a></p>
+        <p><a href='{_frontendUrls.Home()}'>← Повернутися на головну</a></p>
     </div>
 </body>
 </html>";

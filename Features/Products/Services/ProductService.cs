@@ -620,40 +620,20 @@ public class ProductService(AppDbContext db, IMediaService mediaService, IPromot
 
             if (promotion != null && promotion.Level == PromotionLevel.Product)
             {
-                // Продукти, що підпадають під умови акції
-                var productIds = new List<Guid>();
+                var plc = promotion.ProductConditions;
+                var hasTargeting = plc != null
+                    && PromotionConditionProductRefs.HasProductOrCategoryTargeting(plc.ProductIds, plc.CategoryIds);
 
-                // Якщо задані конкретні продукти
-
-                if (promotion.ProductConditions?.ProductIds.HasValue == true &&
-                    promotion.ProductConditions.ProductIds.Value != null)
+                if (hasTargeting)
                 {
-                    productIds.AddRange(promotion.ProductConditions.ProductIds.Value);
+                    var productIds = await PromotionConditionProductRefs.ResolvePromotionReferencedProductIdsAsync(
+                        _db,
+                        promotion,
+                        activeOnly: !filter.IncludeInactive);
+
+                    query = query.Where(p => productIds.Contains(p.Id));
                 }
-
-                // Якщо задані категорії (включно з дочірніми)
-                if (promotion.ProductConditions?.CategoryIds.HasValue == true &&
-                    promotion.ProductConditions.CategoryIds.Value != null &&
-                    promotion.ProductConditions.CategoryIds.Value.Count > 0)
-                {
-                    var catIds = promotion.ProductConditions.CategoryIds.Value;
-
-                    var descendantCategoryIds = await _db.CategoryClosures
-                        .Where(c => catIds.Contains(c.AncestorId))
-                        .Select(c => c.DescendantId)
-                        .ToListAsync();
-
-                    var categoryProductIds = await _db.Products
-                        .Where(p => descendantCategoryIds.Contains(p.CategoryId))
-                        .Select(p => p.Id)
-                        .ToListAsync();
-
-                    productIds.AddRange(categoryProductIds);
-                }
-
-                productIds = [.. productIds.Distinct()];
-
-                query = query.Where(p => productIds.Contains(p.Id));
+                // Без productIds/categoryIds — акція на весь каталог, додатковий фільтр не потрібен
             }
         }
         // ===============================

@@ -24,6 +24,7 @@ using LeveLEO.Features.Statistics.Services;
 using LeveLEO.Features.UserProductRelations.Services;
 using LeveLEO.Features.Users.Services;
 using LeveLEO.Infrastructure.Caching;
+using LeveLEO.Infrastructure.Common;
 using LeveLEO.Infrastructure.Delivery;
 using LeveLEO.Infrastructure.Email;
 using LeveLEO.Infrastructure.Events;
@@ -213,6 +214,7 @@ builder.Services.AddScoped<IContactFormService, ContactFormService>();
 // =====================================================
 // INFRASTRUCTURE SERVICES
 // =====================================================
+builder.Services.AddSingleton<IFrontendUrlBuilder, FrontendUrlBuilder>();
 builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddTransient<ISmsSender, SmsSender>();

@@ -180,19 +180,24 @@ public class PromotionService(
         List<Promotion> promotions,
         bool includeSensitiveCouponFields)
     {
+        var perPromotionIds = new List<HashSet<Guid>>(promotions.Count);
         var allIds = new HashSet<Guid>();
+
         foreach (var p in promotions)
         {
-            foreach (var id in CollectReferencedProductIds(p))
+            var ids = await PromotionConditionProductRefs.ResolvePromotionReferencedProductIdsAsync(_db, p);
+            perPromotionIds.Add(ids);
+            foreach (var id in ids)
                 allIds.Add(id);
         }
 
         var lookup = await LoadProductLookupAsync(allIds);
         var result = new List<PromotionResponseDto>(promotions.Count);
-        foreach (var p in promotions)
+
+        for (var i = 0; i < promotions.Count; i++)
         {
-            var refs = BuildReferencedProducts(p, lookup);
-            result.Add(MapToDtoInternal(p, includeSensitiveCouponFields, refs));
+            var refs = BuildReferencedProducts(perPromotionIds[i], lookup);
+            result.Add(MapToDtoInternal(promotions[i], includeSensitiveCouponFields, refs));
         }
 
         return result;
@@ -239,16 +244,6 @@ public class PromotionService(
         };
     }
 
-    private static HashSet<Guid> CollectReferencedProductIds(Promotion p)
-    {
-        var ids = new HashSet<Guid>();
-        foreach (var id in p.ProductConditions?.GetProductIdsOrEmpty() ?? [])
-            ids.Add(id);
-        foreach (var id in p.CartConditions?.GetProductIdsOrEmpty() ?? [])
-            ids.Add(id);
-        return ids;
-    }
-
     private async Task<Dictionary<Guid, (string Name, string Slug, bool IsActive)>> LoadProductLookupAsync(HashSet<Guid> ids)
     {
         if (ids.Count == 0)
@@ -264,10 +259,10 @@ public class PromotionService(
     }
 
     private static List<PromotionReferencedProductDto> BuildReferencedProducts(
-        Promotion promotion,
+        HashSet<Guid> productIds,
         IReadOnlyDictionary<Guid, (string Name, string Slug, bool IsActive)> lookup)
     {
-        var ordered = CollectReferencedProductIds(promotion).OrderBy(id => id).ToList();
+        var ordered = productIds.OrderBy(id => id).ToList();
         var list = new List<PromotionReferencedProductDto>(ordered.Count);
         foreach (var productId in ordered)
         {
@@ -394,6 +389,10 @@ public class PromotionService(
                 p.DiscountValue != null)
             .ToListAsync();
 
+        var categoryDescendantMap = await PromotionConditionProductRefs.BuildCategoryDescendantMapAsync(
+            _db,
+            PromotionConditionProductRefs.CollectCategoryIdsFromPromotions(promotions));
+
         var result = new Dictionary<Guid, (decimal?, Promotion?)>();
 
         foreach (var product in productList)
@@ -403,7 +402,7 @@ public class PromotionService(
 
             foreach (var promo in promotions)
             {
-                if (!IsProductMatchingFast(promo, product))
+                if (!IsProductMatching(promo, product, categoryDescendantMap))
                     continue;
 
                 var discounted = CalculateDiscount(product.Price, promo);
@@ -449,6 +448,10 @@ public class PromotionService(
                 p.DiscountValue != null)
             .Include(p => p.Translations)
             .ToListAsync();
+
+        var cartCategoryDescendantMap = await PromotionConditionProductRefs.BuildCategoryDescendantMapAsync(
+            _db,
+            PromotionConditionProductRefs.CollectCategoryIdsFromPromotions(cartPromotions));
 
         Promotion? couponPromotion = null;
         ApplyCouponResult couponResult = ApplyCouponResult.None;
@@ -535,7 +538,12 @@ public class PromotionService(
                                 return true;
                             }
 
-                            if (!itemList.Any(i => i.Quantity > 0 && categoryIds.Contains(i.Product.CategoryId)))
+                            if (!itemList.Any(i =>
+                                    i.Quantity > 0 &&
+                                    PromotionConditionProductRefs.ProductCategoryMatchesPromotionCategories(
+                                        i.Product.CategoryId,
+                                        categoryIds,
+                                        cartCategoryDescendantMap)))
                                 return false;
                         }
                     }
@@ -700,9 +708,10 @@ public class PromotionService(
         };
     }
 
-    private static bool IsProductMatchingFast(
-    Promotion promo,
-    Product product)
+    private static bool IsProductMatching(
+        Promotion promo,
+        Product product,
+        IReadOnlyDictionary<Guid, HashSet<Guid>> categoryDescendantMap)
     {
         var cond = promo.ProductConditions;
         // Без умов — акція на весь каталог (доступні товари)
@@ -718,11 +727,13 @@ public class PromotionService(
             return false;
         }
 
-        // Якщо задані категорії
+        // Якщо задані категорії (включно з підкатегоріями через closure)
         if (cond.CategoryIds.HasValue &&
-            cond.CategoryIds.Value != null &&
-            cond.CategoryIds.Value.Count > 0 &&
-            !cond.CategoryIds.Value.Contains(product.CategoryId))
+            cond.CategoryIds.Value is { Count: > 0 } categoryIds &&
+            !PromotionConditionProductRefs.ProductCategoryMatchesPromotionCategories(
+                product.CategoryId,
+                categoryIds,
+                categoryDescendantMap))
         {
             return false;
         }
